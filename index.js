@@ -5,7 +5,6 @@ const request = require('request');
 const jenkins = require('jenkins');
 const fs = require('fs');
 const async = require('async');
-
 class J5sExecutor extends Executor {
 
     /**

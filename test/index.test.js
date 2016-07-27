@@ -31,6 +31,7 @@ describe('index', () => {
     let executor;
     let Executor;
     let fsMock;
+<<<<<<< HEAD
     let jenkinsMock;
     let requestMock;
     let getCrumbMock;
@@ -54,6 +55,18 @@ describe('index', () => {
 
     const fakeCrumb = {
         statusCode: 200,
+=======
+    let executor;
+    let readableMock;
+    let breakRunMock;
+//    let getCrumbMock;
+    const testScmUrl = 'git@github.com:screwdriver-cd/hashr.git';
+    const testBuildId = 'build_ad11234tag41fda';
+    const testJobId = 'job_ad11234tag41fda';
+    const testPipelineId = 'pipeline_ad11234tag41fda';
+    const fakeResponse = {
+        statusCode: 201,
+>>>>>>> 14a281d... add getCrumb as Jenkins need it
         body: {
             _class: 'hudson.security.csrf.DefaultCrumbIssuer',
             crumb: '24e80888069a1beaa5af3e0e3ef201d0',
@@ -66,10 +79,24 @@ describe('index', () => {
             number: 1
         }
     };
+<<<<<<< HEAD
 
     const buildNumber = fakeJobInfo.lastBuild.number;
 
     const jobName = config.buildId;
+=======
+    const fakeCrumb = {
+        statusCode: 200,
+        body: {
+            _class: 'hudson.security.csrf.DefaultCrumbIssuer',
+            crumb: '24e80888069a1beaa5af3e0e3ef201d0',
+            crumbRequestField: 'Jenkins-Crumb'
+        }
+    };
+    const crumbUrl = 'https://jenkins:8080/crumbIssuer/api/json';
+    const jobsUrl = 'https://jenkins/apis/batch/v1/namespaces/default/jobs';
+    const podsUrl = 'https://jenkins/api/v1/namespaces/default/pods';
+>>>>>>> 14a281d... add getCrumb as Jenkins need it
 
     before(() => {
         mockery.enable({
@@ -126,6 +153,7 @@ describe('index', () => {
 
     it('extends base class', () => {
         assert.isFunction(executor.start);
+<<<<<<< HEAD
         assert.isFunction(executor.stream);
         assert.isFunction(executor.stop);
     });
@@ -148,6 +176,89 @@ describe('index', () => {
                 assert.deepEqual(response, jenkinsClientMock);
                 done();
             });
+=======
+        assert.isFunction(executor.getCrumb);
+    });
+
+    describe('getCrumb', () => {
+        beforeEach(() => {
+            breakRunMock.yieldsAsync(null, fakeCrumb);
+        });
+
+        it('with correct uri', (done) => {
+            const crumbConfig = {
+                uri: crumbUrl,
+                method: 'GET'
+            };
+
+            executor.getCrumb({
+                host: 'jenkins'
+            }, (err) => {
+                assert.isNull(err);
+                assert.calledOnce(breakRunMock);
+                assert.calledWith(breakRunMock, crumbConfig);
+                done();
+            });
+        });
+
+        it('with incorrect uri', (done) => {
+            const error = new Error('T_T');
+
+            breakRunMock.yieldsAsync(error);
+
+            executor.getCrumb({
+                host: 'jenkins'
+            }, (err) => {
+                assert.deepEqual(err, error);
+                done();
+            });
+        });
+    });
+
+    // describe('createJob', () => {
+    //     beforeEach(() => {
+    //         breakRunMock.yieldsAsync(null, fakeResponse, fakeResponse.body);
+    //         // getCrumbMock = sinon.stub();
+    //         // mockery.registerMock('getCrumb', getCrumbMock);
+    //     });
+    //
+    //     it('create a job successful', (done) => {
+    //         // getCrumbMock.yieldsAsync(null, fakeCrumb);
+    //         const postConfig = {
+    //             uri: jobsUrl,
+    //             method: 'POST',
+    //             json: {
+    //                 metadata: {
+    //                     name: testBuildId,
+    //                     job: testJobId,
+    //                     pipeline: testPipelineId
+    //                 },
+    //                 command: ['/opt/screwdriver/launch screwdriver-cd hashr addSD main']
+    //             },
+    //             headers: {
+    //                 'Content-Type': 'application/xml',
+    //                 [fakeCrumb.crumbRequestField]: fakeCrumb.crumb
+    //             }
+    //         };
+    //
+    //         executor.createJob({
+    //             host: 'jenkins',
+    //             name: 'sampleMilano',
+    //             scmUrl: 'git@github.com:screwdriver-cd/hashr.git#addSD',
+    //             secretToken: 'secretToken'
+    //         }, (err) => {
+    //             assert.isNull(err);
+    //             assert.calledOnce(breakRunMock);
+    //             assert.calledWith(breakRunMock, postConfig);
+    //             done();
+    //         });
+    //     });
+    // });
+
+    describe('start', () => {
+        beforeEach(() => {
+            breakRunMock.yieldsAsync(null, fakeResponse, fakeResponse.body);
+>>>>>>> 14a281d... add getCrumb as Jenkins need it
         });
 
         it('return error when jenkins() fails to instantiate a jenkins client', (done) => {

@@ -7,6 +7,7 @@ const request = require('request');
 const tinytim = require('tinytim');
 const yaml = require('js-yaml');
 const hoek = require('hoek');
+const jenkins = require('jenkins');
 const SCM_URL_REGEX = /^git@([^:]+):([^\/]+)\/(.+?)\.git(#.+)?$/;
 const GIT_ORG = 2;
 const GIT_REPO = 3;
@@ -26,13 +27,47 @@ class J5sExecutor extends Executor {
 
         this.token = options.token;
         this.host = options.host;
-        this.jobsUrl = `https://${this.host}/apis/batch/v1/namespaces/default/jobs`;
-        this.podsUrl = `https://${this.host}/api/v1/namespaces/default/pods`;
+        this.jenkins = jenkins('http://${this.host}:8080');
+        // need to pass port nubmer in the future
+        this.crumbUrl = `https://${this.host}:8080/crumbIssuer/api/json`;
+        //
+        // this.jobsUrl = `https://${this.host}/apis/batch/v1/namespaces/default/jobs`;
+        // this.podsUrl = `https://${this.host}/api/v1/namespaces/default/pods`;
         this.breaker = new Fusebox(request);
     }
 
     /**
-     * Starts a j5s build
+     * Get crumb for Jenkins
+     * @method getCrumb
+     * @param  {Function} callback          Callback with crumb object
+     */
+    getCrumb(config, callback) {
+        const options = {
+            uri: this.crumbUrl,
+            method: 'GET'
+        };
+
+        this.breaker.runCommand(options, (err, resp) => {
+            if (err) {
+                return callback(err);
+            }
+
+            if (resp.statusCode !== 200) {
+                const msg = `Failed to get Jenkins crumb: ${JSON.stringify(resp.body)}`;
+
+                return callback(new Error(msg));
+            }
+
+            return callback(null, resp);
+        });
+    }
+
+    // createJob(config, callback) {
+    //     return callback(null);
+    // }
+
+    /**
+     * Create Jenkins Job & Starts a build
      * @method start
      * @param  {Object}   config            A configuration object
      * @param  {String}   config.buildId    ID for the build
@@ -43,6 +78,9 @@ class J5sExecutor extends Executor {
      * @param  {Function} callback          Callback function
      */
     _start(config, callback) {
+        // const crumb = getCrumb().crumb;
+        // const crumbField = getCrumb().crumbRequestField;
+
         const scmMatch = SCM_URL_REGEX.exec(config.scmUrl);
         const jobTemplate = tinytim.renderFile(path.resolve(__dirname, './config/job.yaml.tim'), {
             git_org: scmMatch[GIT_ORG],

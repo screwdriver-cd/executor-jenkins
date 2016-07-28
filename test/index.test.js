@@ -52,7 +52,7 @@ describe('index', () => {
             crumbRequestField: 'Jenkins-Crumb'
         }
     };
-    const crumbUrl = 'https://jenkins:8080/crumbIssuer/api/json';
+    const crumbUrl = 'https://admin:fakepassword@jenkins:8080/crumbIssuer/api/json';
     const jobsUrl = 'https://jenkins/apis/batch/v1/namespaces/default/jobs';
     const podsUrl = 'https://jenkins/api/v1/namespaces/default/pods';
 
@@ -64,10 +64,12 @@ describe('index', () => {
     });
 
     beforeEach(() => {
-        requestMock = {
-            post: sinon.stub(),
-            get: sinon.stub()
-        };
+        // requestMock = {
+        //     post: sinon.stub(),
+        //     get: sinon.stub()
+        // };
+
+        requestMock = sinon.stub();
 
         fsMock = {
             readFileSync: sinon.stub()
@@ -78,6 +80,7 @@ describe('index', () => {
         };
 
         breakRunMock = sinon.stub();
+//        getCrumbMock = sinon.stub();
 
         BreakerMock.prototype.runCommand = breakRunMock;
         ReadableMock.prototype.wrap = readableMock.wrap;
@@ -98,8 +101,9 @@ describe('index', () => {
         /* eslint-enable global-require */
 
         executor = new Executor({
-            token: 'api_key',
-            host: 'jenkins'
+            host: 'jenkins',
+            username: 'admin',
+            password: 'fakepassword'
         });
     });
 
@@ -119,35 +123,44 @@ describe('index', () => {
     });
 
     describe('getCrumb', () => {
-        beforeEach(() => {
-            breakRunMock.yieldsAsync(null, fakeCrumb);
-        });
-
-        it('with correct uri', (done) => {
+        it('with correct url', (done) => {
+            requestMock.yieldsAsync(null, fakeCrumb);
             const crumbConfig = {
-                uri: crumbUrl,
+                url: crumbUrl,
                 method: 'GET'
             };
 
-            executor.getCrumb({
-                host: 'jenkins'
-            }, (err) => {
+            executor.getCrumb((err, response) => {
                 assert.isNull(err);
-                assert.calledOnce(breakRunMock);
-                assert.calledWith(breakRunMock, crumbConfig);
+                assert.calledOnce(requestMock);
+                assert.calledWith(requestMock, crumbConfig);
+                assert.deepEqual(fakeCrumb.body, response);
                 done();
             });
         });
 
-        it('with incorrect uri', (done) => {
+        it('return error when request responds with error', (done) => {
             const error = new Error('T_T');
 
-            breakRunMock.yieldsAsync(error);
+            requestMock.yieldsAsync(error);
 
-            executor.getCrumb({
-                host: 'jenkins'
-            }, (err) => {
+            executor.getCrumb((err) => {
                 assert.deepEqual(err, error);
+                done();
+            });
+        });
+
+        it('return error when request responds with non 200 status code', (done) => {
+            requestMock.yieldsAsync(null, {
+                statusCode: 201,
+                body: {
+                    any: 'thing'
+                }
+            });
+
+            executor.getCrumb((err, response) => {
+                assert.deepEqual(err.message, 'Failed to get crumb: {"any":"thing"}');
+                assert.isNotOk(response);
                 done();
             });
         });

@@ -2,7 +2,7 @@
 const Executor = require('screwdriver-executor-base');
 const path = require('path');
 const Readable = require('stream').Readable;
-const Fusebox = require('circuit-fuses');
+// const Fusebox = require('circuit-fuses');
 const request = require('request');
 const tinytim = require('tinytim');
 const yaml = require('js-yaml');
@@ -21,19 +21,23 @@ class J5sExecutor extends Executor {
      * @param  {Object} options           Configuration options
      * @param  {Object} options.token     Api Token to make requests with
      * @param  {Object} options.host      Jenkins hostname to make requests to
+     * @param  {Object} options.username  Jenkins username
+     * @param  {Object} options.password  Jenkins password/token
      */
     constructor(options) {
         super();
 
-        this.token = options.token;
+//        this.token = options.token;
         this.host = options.host;
-        this.jenkins = jenkins('http://${this.host}:8080');
+        this.username = options.username;
+        this.password = options.password;
         // need to pass port nubmer in the future
-        this.crumbUrl = `https://${this.host}:8080/crumbIssuer/api/json`;
-        //
+        this.crumbUrl =
+    `https://${this.username}:${this.password}@${this.host}:8080/crumbIssuer/api/json`;
+
         // this.jobsUrl = `https://${this.host}/apis/batch/v1/namespaces/default/jobs`;
         // this.podsUrl = `https://${this.host}/api/v1/namespaces/default/pods`;
-        this.breaker = new Fusebox(request);
+        // this.breaker = new Fusebox(request);
     }
 
     /**
@@ -41,35 +45,41 @@ class J5sExecutor extends Executor {
      * @method getCrumb
      * @param  {Function} callback          Callback with crumb object
      */
-    getCrumb(config, callback) {
+    getCrumb(callback) {
         const options = {
-            uri: this.crumbUrl,
+            url: this.crumbUrl,
             method: 'GET'
         };
 
-        this.breaker.runCommand(options, (err, resp) => {
-            if (err) {
-                return callback(err);
-            }
-
-            if (resp.statusCode !== 200) {
-                const msg = `Failed to get Jenkins crumb: ${JSON.stringify(resp.body)}`;
+        request(options, (error, response) => {
+            if (error) return callback(new Error(error));
+            if (response.statusCode !== 200) {
+                const msg = `Failed to get crumb: ${JSON.stringify(response.body)}`;
 
                 return callback(new Error(msg));
             }
 
-            return callback(null, resp);
+            return callback(null, response.body);
         });
     }
 
-    // createJob(config, callback) {
-    //     return callback(null);
-    // }
+    createJob(config, callback) {
+        const crumb = getCrumb().crumb;
+        const crumbField = getCrumb().crumbRequestField;
+        this.jenkins = jenkins({
+            baseUrl: `http://${username}:${password}@${this.host}:8080`,
+            headers: {
+                'Jenkins-Crumb': crumb
+            }
+        });
+        return callback(null);
+    }
 
     /**
      * Create Jenkins Job & Starts a build
      * @method start
      * @param  {Object}   config            A configuration object
+
      * @param  {String}   config.buildId    ID for the build
      * @param  {String}   config.jobId      ID for the job
      * @param  {String}   config.pipelineId ID for the pipeline
@@ -78,9 +88,6 @@ class J5sExecutor extends Executor {
      * @param  {Function} callback          Callback function
      */
     _start(config, callback) {
-        // const crumb = getCrumb().crumb;
-        // const crumbField = getCrumb().crumbRequestField;
-
         const scmMatch = SCM_URL_REGEX.exec(config.scmUrl);
         const jobTemplate = tinytim.renderFile(path.resolve(__dirname, './config/job.yaml.tim'), {
             git_org: scmMatch[GIT_ORG],

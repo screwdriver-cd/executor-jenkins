@@ -39,7 +39,6 @@ class J5sExecutor extends Executor {
 
         request(options, (error, response) => {
             if (error) return callback(new Error(error.message));
-
             if (response.statusCode !== 200) {
                 const msg = `Failed to get crumb: ${JSON.stringify(response.body)}`;
 

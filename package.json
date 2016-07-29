@@ -42,6 +42,7 @@
     "sinon": "^1.17.4"
   },
   "dependencies": {
+    "async": "^2.0.1",
     "circuit-fuses": "1.0.0",
     "hoek": "^4.0.1",
     "jenkins": "^0.17.0",

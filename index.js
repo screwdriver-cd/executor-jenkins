@@ -9,6 +9,7 @@ const yaml = require('js-yaml');
 const hoek = require('hoek');
 const jenkins = require('jenkins');
 const fs = require('fs');
+const async = require('async');
 const SCM_URL_REGEX = /^git@([^:]+):([^\/]+)\/(.+?)\.git(#.+)?$/;
 const GIT_ORG = 2;
 const GIT_REPO = 3;
@@ -48,6 +49,7 @@ class J5sExecutor extends Executor {
 
         request(options, (error, response) => {
             if (error) return callback(new Error(error));
+
             if (response.statusCode !== 200) {
                 const msg = `Failed to get crumb: ${JSON.stringify(response.body)}`;
 
@@ -58,39 +60,68 @@ class J5sExecutor extends Executor {
         });
     }
 
+    /**
+     * Initialize the jenkins client with crumb
+     * @method initJenkinsClient
+     * @param  crumb                        CSRF token from jenkins api
+     * @param  {Function} callback          Callback with jenkins client object
+     */
+    initJenkinsClient(crumb, callback) {
+        const jenkinsClient = jenkins({
+            baseUrl: `http://${this.username}:${this.password}@${this.host}:8080`,
+            headers: {
+                [crumb.crumbRequestField]: crumb.crumb
+            }
+        });
+
+        return callback(null, jenkinsClient);
+    }
+
+    /**
+     * Read config file from configPath and create a jenkins job with jobName
+     * @method readConfigAndCreateJob
+     * @param  jenkinsClient                jenkinsClient object
+     * @param  jobName                      Name of the new jenkins job
+     * @param  configPath                   Path of the config xml file
+     * @param  {Function} callback          Callback with null if sucessful otherwise error
+     */
+    readConfigAndCreateJob(jenkinsClient, jobName, configPath, callback) {
+        const xml = fs.readFileSync(configPath, 'utf-8');
+
+        jenkinsClient.job.create(jobName, xml, (errors, response) => {
+            if (errors) return callback(new Error(errors));
+
+            if (response.statusCode !== 200) {
+                const msg = `Failed to create job: ${response.statusCode}`
+                 + `: ${JSON.stringify(response.body)}`;
+
+                return callback(new Error(msg));
+            }
+
+            return callback(null);
+        });
+    }
+
+    /**
+     * Create a jenkins job
+     * @method createJob
+     * @param  {Function} callback          Callback with null if successful otherwise error
+     */
     createJob(callback) {
         const fakeJobName = 'Hello';
         const fakeConfigPath = path.resolve(__dirname, './config/test-job.xml');
 
-        this.getCrumb((err, data) => {
-            if (err) callback(new Error(err));
+        async.waterfall([
+            this.getCrumb,
+            this.initJenkinsClient,
+            /* eslint-disable arrow-body-style */
+            (jenkinsClient, cb) => {
+                return this.readConfigAndCreateJob(jenkinsClient, fakeJobName, fakeConfigPath, cb);
+            }
+        ], (error) => {
+            if (error) return callback(error);
 
-            /* eslint-disable new-cap */
-            const jenkinsClient = jenkins({
-                baseUrl: `http://${this.username}:${this.password}@${this.host}:8080`,
-                headers: {
-                    [data.crumbRequestField]: data.crumb
-                }
-            });
-
-            fs.readFileSync(fakeConfigPath, 'utf-8', (error, xml) => {
-                if (err) return callback(new Error(err));
-
-                jenkinsClient.job.create(fakeJobName, xml, (errors, response) => {
-                    if (errors) return callback(new Error(errors));
-
-                    if (response.statusCode !== 200) {
-                        const msg = `Failed to create job: ${response.statusCode}`
-                         + `: ${JSON.stringify(response.body)}`;
-
-                        return callback(new Error(msg));
-                    }
-
-                    return callback(null);
-                });
-
-                return callback(null);
-            });
+            return callback(null);
         });
     }
 

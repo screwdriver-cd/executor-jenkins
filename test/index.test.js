@@ -6,13 +6,26 @@ const mockery = require('mockery');
 
 sinon.assert.expose(assert, { prefix: '' });
 
-const TEST_TIM_YAML = `
-metadata:
-  name: {{build_id}}
-  job: {{job_id}}
-  pipeline: {{pipeline_id}}
-command:
-- "/opt/screwdriver/launch {{git_org}} {{git_repo}} {{git_branch}} {{job_name}}"
+const TEST_XML =
+`<project>
+<description/>
+<keepDependencies>false</keepDependencies>
+<properties/>
+<scm class="hudson.scm.NullSCM"/>
+<canRoam>true</canRoam>
+<disabled>false</disabled>
+<blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+<blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+<triggers/>
+<concurrentBuild>false</concurrentBuild>
+<builders>
+<hudson.tasks.Shell>
+<command>echo 'Hello World'</command>
+</hudson.tasks.Shell>
+</builders>
+<publishers/>
+<buildWrappers/>
+</project>
 `;
 
 /**
@@ -30,10 +43,13 @@ describe('index', () => {
     let Executor;
     let requestMock;
     let fsMock;
+    let pathMock;
     let executor;
     let readableMock;
     let breakRunMock;
-//    let getCrumbMock;
+    let getCrumbMock;
+    let jenkinInitMock;
+    let jenkinsMock;
     const testScmUrl = 'git@github.com:screwdriver-cd/hashr.git';
     const testBuildId = 'build_ad11234tag41fda';
     const testJobId = 'job_ad11234tag41fda';
@@ -75,26 +91,41 @@ describe('index', () => {
             readFileSync: sinon.stub()
         };
 
+        pathMock = {
+            resolve: sinon.stub()
+        };
+
         readableMock = {
             wrap: sinon.stub()
         };
 
         breakRunMock = sinon.stub();
-//        getCrumbMock = sinon.stub();
+
+        getCrumbMock = sinon.stub();
+
+        jenkinsMock = {
+            job: {
+                create: sinon.stub()
+            }
+        };
+
+        jenkinInitMock = sinon.stub();
 
         BreakerMock.prototype.runCommand = breakRunMock;
         ReadableMock.prototype.wrap = readableMock.wrap;
 
-        fsMock.readFileSync.withArgs('/etc/jenkins/apikey/token').returns('api_key');
-        fsMock.readFileSync.withArgs(sinon.match(/config\/job.yaml.tim/))
-        .returns(TEST_TIM_YAML);
+        // fsMock.readFileSync.withArgs('/etc/jenkins/apikey/token').returns('api_key');
+        fsMock.readFileSync.yieldsAsync(null, TEST_XML);
+        pathMock.resolve.returns(null);
 
         mockery.registerMock('stream', {
             Readable: ReadableMock
         });
         mockery.registerMock('fs', fsMock);
+        mockery.registerMock('path', pathMock);
         mockery.registerMock('request', requestMock);
         mockery.registerMock('circuit-fuses', BreakerMock);
+        mockery.registerMock('jenkins', jenkinInitMock);
 
         /* eslint-disable global-require */
         Executor = require('../index');
@@ -119,7 +150,6 @@ describe('index', () => {
     it('extends base class', () => {
         assert.isFunction(executor.stop);
         assert.isFunction(executor.start);
-        assert.isFunction(executor.getCrumb);
     });
 
     describe('getCrumb', () => {
@@ -166,45 +196,51 @@ describe('index', () => {
         });
     });
 
-    // describe('createJob', () => {
-    //     beforeEach(() => {
-    //         breakRunMock.yieldsAsync(null, fakeResponse, fakeResponse.body);
-    //         // getCrumbMock = sinon.stub();
-    //         // mockery.registerMock('getCrumb', getCrumbMock);
-    //     });
-    //
-    //     it('create a job successful', (done) => {
-    //         // getCrumbMock.yieldsAsync(null, fakeCrumb);
-    //         const postConfig = {
-    //             uri: jobsUrl,
-    //             method: 'POST',
-    //             json: {
-    //                 metadata: {
-    //                     name: testBuildId,
-    //                     job: testJobId,
-    //                     pipeline: testPipelineId
-    //                 },
-    //                 command: ['/opt/screwdriver/launch screwdriver-cd hashr addSD main']
-    //             },
-    //             headers: {
-    //                 'Content-Type': 'application/xml',
-    //                 [fakeCrumb.crumbRequestField]: fakeCrumb.crumb
-    //             }
-    //         };
-    //
-    //         executor.createJob({
-    //             host: 'jenkins',
-    //             name: 'sampleMilano',
-    //             scmUrl: 'git@github.com:screwdriver-cd/hashr.git#addSD',
-    //             secretToken: 'secretToken'
-    //         }, (err) => {
-    //             assert.isNull(err);
-    //             assert.calledOnce(breakRunMock);
-    //             assert.calledWith(breakRunMock, postConfig);
-    //             done();
-    //         });
-    //     });
-    // });
+    describe('createJob', () => {
+        beforeEach(() => {
+            mockery.registerMock('getCrumb', getCrumbMock);
+        });
+
+        it('return 200 when the job is successfully created', (done) => {
+            requestMock.yieldsAsync(null, fakeCrumb);
+            getCrumbMock.yieldsAsync(null, fakeCrumb.body);
+            jenkinInitMock.returns(jenkinsMock);
+            jenkinsMock.job.create.yieldsAsync(null);
+
+            executor.createJob((err) => {
+                assert.isNull(err);
+                assert.calledOnce(jenkinInitMock);
+                assert.calledOnce(jenkinsMock.job.create);
+                done();
+            });
+        });
+
+        it('return error when request responds with error', (done) => {
+            const error = new Error('T_T');
+
+            requestMock.yieldsAsync(error);
+
+            executor.getCrumb((err) => {
+                assert.deepEqual(err, error);
+                done();
+            });
+        });
+
+        it('return error when request responds with non 200 status code', (done) => {
+            requestMock.yieldsAsync(null, {
+                statusCode: 201,
+                body: {
+                    any: 'thing'
+                }
+            });
+
+            executor.getCrumb((err, response) => {
+                assert.deepEqual(err.message, 'Failed to get crumb: {"any":"thing"}');
+                assert.isNotOk(response);
+                done();
+            });
+        });
+    });
 
     describe('start', () => {
         beforeEach(() => {

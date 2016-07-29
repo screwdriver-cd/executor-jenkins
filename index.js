@@ -8,6 +8,7 @@ const tinytim = require('tinytim');
 const yaml = require('js-yaml');
 const hoek = require('hoek');
 const jenkins = require('jenkins');
+const fs = require('fs');
 const SCM_URL_REGEX = /^git@([^:]+):([^\/]+)\/(.+?)\.git(#.+)?$/;
 const GIT_ORG = 2;
 const GIT_REPO = 3;
@@ -26,22 +27,16 @@ class J5sExecutor extends Executor {
      */
     constructor(options) {
         super();
-
-//        this.token = options.token;
         this.host = options.host;
         this.username = options.username;
         this.password = options.password;
         // need to pass port nubmer in the future
         this.crumbUrl =
     `https://${this.username}:${this.password}@${this.host}:8080/crumbIssuer/api/json`;
-
-        // this.jobsUrl = `https://${this.host}/apis/batch/v1/namespaces/default/jobs`;
-        // this.podsUrl = `https://${this.host}/api/v1/namespaces/default/pods`;
-        // this.breaker = new Fusebox(request);
     }
 
     /**
-     * Get crumb for Jenkins
+     * Get CSRF token crumb for Jenkins
      * @method getCrumb
      * @param  {Function} callback          Callback with crumb object
      */
@@ -63,16 +58,40 @@ class J5sExecutor extends Executor {
         });
     }
 
-    createJob(config, callback) {
-        const crumb = getCrumb().crumb;
-        const crumbField = getCrumb().crumbRequestField;
-        this.jenkins = jenkins({
-            baseUrl: `http://${username}:${password}@${this.host}:8080`,
-            headers: {
-                'Jenkins-Crumb': crumb
-            }
+    createJob(callback) {
+        const fakeJobName = 'Hello';
+        const fakeConfigPath = path.resolve(__dirname, './config/test-job.xml');
+
+        this.getCrumb((err, data) => {
+            if (err) callback(new Error(err));
+
+            /* eslint-disable new-cap */
+            const jenkinsClient = jenkins({
+                baseUrl: `http://${this.username}:${this.password}@${this.host}:8080`,
+                headers: {
+                    [data.crumbRequestField]: data.crumb
+                }
+            });
+
+            fs.readFileSync(fakeConfigPath, 'utf-8', (error, xml) => {
+                if (err) return callback(new Error(err));
+
+                jenkinsClient.job.create(fakeJobName, xml, (errors, response) => {
+                    if (errors) return callback(new Error(errors));
+
+                    if (response.statusCode !== 200) {
+                        const msg = `Failed to create job: ${response.statusCode}`
+                         + `: ${JSON.stringify(response.body)}`;
+
+                        return callback(new Error(msg));
+                    }
+
+                    return callback(null);
+                });
+
+                return callback(null);
+            });
         });
-        return callback(null);
     }
 
     /**

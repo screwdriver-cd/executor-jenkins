@@ -45,7 +45,12 @@ function ReadableMock() {}
  * @method BreakerMock
  */
 function BreakerMock() {}
+<<<<<<< HEAD
 >>>>>>> 7e20056... Add createJob method
+=======
+//
+// function ExecutorFactoryMock() {}
+>>>>>>> 0840acd... add createJob unit test
 
 describe('index', () => {
     let executor;
@@ -79,13 +84,18 @@ describe('index', () => {
 =======
 =======
     let pathMock;
+<<<<<<< HEAD
 >>>>>>> 7e20056... Add createJob method
     let executor;
+=======
+>>>>>>> 0840acd... add createJob unit test
     let readableMock;
     let breakRunMock;
     let getCrumbMock;
-    let jenkinInitMock;
     let jenkinsMock;
+    let jenkinsClientMock;
+    let initJenkinsClientMock;
+    let readConfigAndCreateJobMock;
     const testScmUrl = 'git@github.com:screwdriver-cd/hashr.git';
     const testBuildId = 'build_ad11234tag41fda';
     const testJobId = 'job_ad11234tag41fda';
@@ -133,12 +143,15 @@ describe('index', () => {
 
     beforeEach(() => {
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         // requestMock = {
         //     post: sinon.stub(),
         //     get: sinon.stub()
         // };
 
+=======
+>>>>>>> 0840acd... add createJob unit test
         requestMock = sinon.stub();
 
 >>>>>>> c26b951... add getCrumb
@@ -181,20 +194,23 @@ describe('index', () => {
         fsMock.readFileSync.returns(TEST_XML);
 =======
 
-        getCrumbMock = sinon.stub();
-
-        jenkinsMock = {
+        jenkinsClientMock = {
             job: {
                 create: sinon.stub()
             }
         };
 
-        jenkinInitMock = sinon.stub();
+        getCrumbMock = sinon.stub();
+
+        jenkinsMock = sinon.stub();
+
+        initJenkinsClientMock = sinon.stub();
+
+        readConfigAndCreateJobMock = sinon.stub();
 
         BreakerMock.prototype.runCommand = breakRunMock;
         ReadableMock.prototype.wrap = readableMock.wrap;
 
-        // fsMock.readFileSync.withArgs('/etc/jenkins/apikey/token').returns('api_key');
         fsMock.readFileSync.yieldsAsync(null, TEST_XML);
         pathMock.resolve.returns(null);
 >>>>>>> 7e20056... Add createJob method
@@ -207,8 +223,12 @@ describe('index', () => {
         mockery.registerMock('path', pathMock);
         mockery.registerMock('request', requestMock);
         mockery.registerMock('circuit-fuses', BreakerMock);
+<<<<<<< HEAD
         mockery.registerMock('jenkins', jenkinInitMock);
 >>>>>>> 7e20056... Add createJob method
+=======
+        mockery.registerMock('jenkins', jenkinsMock);
+>>>>>>> 0840acd... add createJob unit test
 
         /* eslint-disable global-require */
         Executor = require('../index');
@@ -231,6 +251,7 @@ describe('index', () => {
 
     it('extends base class', () => {
         assert.isFunction(executor.start);
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
         assert.isFunction(executor.stream);
@@ -259,6 +280,10 @@ describe('index', () => {
         assert.isFunction(executor.getCrumb);
 =======
 >>>>>>> 7e20056... Add createJob method
+=======
+        assert.isFunction(executor.getCrumb);
+        assert.isFunction(executor.createJob);
+>>>>>>> 0840acd... add createJob unit test
     });
 
     describe('getCrumb', () => {
@@ -307,30 +332,60 @@ describe('index', () => {
 
     describe('createJob', () => {
         beforeEach(() => {
-            mockery.registerMock('getCrumb', getCrumbMock);
+            getCrumbMock = sinon.stub(executor, 'getCrumb');
+            initJenkinsClientMock = sinon.stub(executor, 'initJenkinsClient');
+            readConfigAndCreateJobMock = sinon.stub(executor, 'readConfigAndCreateJob');
         });
 
-        it('return 200 when the job is successfully created', (done) => {
-            requestMock.yieldsAsync(null, fakeCrumb);
+        it('return null when the job is successfully created', (done) => {
             getCrumbMock.yieldsAsync(null, fakeCrumb.body);
-            jenkinInitMock.returns(jenkinsMock);
-            jenkinsMock.job.create.yieldsAsync(null);
+            initJenkinsClientMock.yieldsAsync(null, jenkinsClientMock);
+            readConfigAndCreateJobMock.yieldsAsync(null);
 
             executor.createJob((err) => {
                 assert.isNull(err);
-                assert.calledOnce(jenkinInitMock);
-                assert.calledOnce(jenkinsMock.job.create);
+                assert.calledOnce(getCrumbMock);
+                assert.calledOnce(initJenkinsClientMock);
+                assert.calledOnce(readConfigAndCreateJobMock);
                 done();
             });
         });
 
-        it('return error when request responds with error', (done) => {
-            const error = new Error('T_T');
+        it('return error when getCrumbs is getting error', (done) => {
+            const error = new Error('getCrumb error');
 
-            requestMock.yieldsAsync(error);
+            getCrumbMock.yieldsAsync(error);
+            initJenkinsClientMock.yieldsAsync(null, null);
+            readConfigAndCreateJobMock.yieldsAsync(null);
 
-            executor.getCrumb((err) => {
-                assert.deepEqual(err, error);
+            executor.createJob((err) => {
+                assert.deepEqual(err.message, error.message);
+                done();
+            });
+        });
+
+        it('return error when initJenkinsClient is getting error', (done) => {
+            const error = new Error('initJenkinsClient error');
+
+            getCrumbMock.yieldsAsync(null, fakeCrumb.body);
+            initJenkinsClientMock.yieldsAsync(error);
+            readConfigAndCreateJobMock.yieldsAsync(null);
+
+            executor.createJob((err) => {
+                assert.deepEqual(err.message, error.message);
+                done();
+            });
+        });
+
+        it.only('return error when readConfigAndCreateJob is getting error', (done) => {
+            const error = new Error('readConfigAndCreateJob error');
+
+            getCrumbMock.yieldsAsync(null, fakeCrumb.body);
+            initJenkinsClientMock.yieldsAsync(null, jenkinsClientMock);
+            readConfigAndCreateJobMock.yieldsAsync(error);
+
+            executor.createJob((err) => {
+                assert.deepEqual(err.message, error.message);
                 done();
             });
         });

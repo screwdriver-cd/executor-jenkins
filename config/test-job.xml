@@ -11,7 +11,11 @@
 <concurrentBuild>false</concurrentBuild>
 <builders>
 <hudson.tasks.Shell>
+<<<<<<< HEAD
 <command>sleep 100 | echo 'Hello, I am going to sleep for 100s!'</command>
+=======
+<command>echo 'Hello World'</command>
+>>>>>>> 7e20056... Add createJob method
 </hudson.tasks.Shell>
 </builders>
 <publishers/>

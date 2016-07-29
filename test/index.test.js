@@ -20,17 +20,38 @@ const TEST_XML =
 <concurrentBuild>false</concurrentBuild>
 <builders>
 <hudson.tasks.Shell>
+<<<<<<< HEAD
 <command>sleep 100 | echo 'Hello, I am going to sleep for 100s!'</command>
+=======
+<command>echo 'Hello World'</command>
+>>>>>>> 7e20056... Add createJob method
 </hudson.tasks.Shell>
 </builders>
 <publishers/>
 <buildWrappers/>
+<<<<<<< HEAD
 </project>`;
+=======
+</project>
+`;
+
+/**
+ * Stub for Readable wrapper
+ * @method ReadableMock
+ */
+function ReadableMock() {}
+/**
+ * Stub for circuit-fuses wrapper
+ * @method BreakerMock
+ */
+function BreakerMock() {}
+>>>>>>> 7e20056... Add createJob method
 
 describe('index', () => {
     let executor;
     let Executor;
     let fsMock;
+<<<<<<< HEAD
 <<<<<<< HEAD
     let jenkinsMock;
     let requestMock;
@@ -56,10 +77,15 @@ describe('index', () => {
     const fakeCrumb = {
         statusCode: 200,
 =======
+=======
+    let pathMock;
+>>>>>>> 7e20056... Add createJob method
     let executor;
     let readableMock;
     let breakRunMock;
-//    let getCrumbMock;
+    let getCrumbMock;
+    let jenkinInitMock;
+    let jenkinsMock;
     const testScmUrl = 'git@github.com:screwdriver-cd/hashr.git';
     const testBuildId = 'build_ad11234tag41fda';
     const testJobId = 'job_ad11234tag41fda';
@@ -120,12 +146,23 @@ describe('index', () => {
             readFileSync: sinon.stub()
         };
 
+<<<<<<< HEAD
         jenkinsMock = sinon.stub();
+=======
+        pathMock = {
+            resolve: sinon.stub()
+        };
+
+        readableMock = {
+            wrap: sinon.stub()
+        };
+>>>>>>> 7e20056... Add createJob method
 
 <<<<<<< HEAD
         requestMock = sinon.stub();
 =======
         breakRunMock = sinon.stub();
+<<<<<<< HEAD
 //        getCrumbMock = sinon.stub();
 >>>>>>> c26b951... add getCrumb
 
@@ -142,10 +179,36 @@ describe('index', () => {
         };
 
         fsMock.readFileSync.returns(TEST_XML);
+=======
+
+        getCrumbMock = sinon.stub();
+
+        jenkinsMock = {
+            job: {
+                create: sinon.stub()
+            }
+        };
+
+        jenkinInitMock = sinon.stub();
+
+        BreakerMock.prototype.runCommand = breakRunMock;
+        ReadableMock.prototype.wrap = readableMock.wrap;
+
+        // fsMock.readFileSync.withArgs('/etc/jenkins/apikey/token').returns('api_key');
+        fsMock.readFileSync.yieldsAsync(null, TEST_XML);
+        pathMock.resolve.returns(null);
+>>>>>>> 7e20056... Add createJob method
 
         mockery.registerMock('fs', fsMock);
+<<<<<<< HEAD
         mockery.registerMock('jenkins', jenkinsMock);
         mockery.registerMock('request', requestMock);
+=======
+        mockery.registerMock('path', pathMock);
+        mockery.registerMock('request', requestMock);
+        mockery.registerMock('circuit-fuses', BreakerMock);
+        mockery.registerMock('jenkins', jenkinInitMock);
+>>>>>>> 7e20056... Add createJob method
 
         /* eslint-disable global-require */
         Executor = require('../index');
@@ -168,6 +231,7 @@ describe('index', () => {
 
     it('extends base class', () => {
         assert.isFunction(executor.start);
+<<<<<<< HEAD
 <<<<<<< HEAD
         assert.isFunction(executor.stream);
         assert.isFunction(executor.stop);
@@ -193,6 +257,8 @@ describe('index', () => {
             });
 =======
         assert.isFunction(executor.getCrumb);
+=======
+>>>>>>> 7e20056... Add createJob method
     });
 
     describe('getCrumb', () => {
@@ -239,45 +305,51 @@ describe('index', () => {
         });
     });
 
-    // describe('createJob', () => {
-    //     beforeEach(() => {
-    //         breakRunMock.yieldsAsync(null, fakeResponse, fakeResponse.body);
-    //         // getCrumbMock = sinon.stub();
-    //         // mockery.registerMock('getCrumb', getCrumbMock);
-    //     });
-    //
-    //     it('create a job successful', (done) => {
-    //         // getCrumbMock.yieldsAsync(null, fakeCrumb);
-    //         const postConfig = {
-    //             uri: jobsUrl,
-    //             method: 'POST',
-    //             json: {
-    //                 metadata: {
-    //                     name: testBuildId,
-    //                     job: testJobId,
-    //                     pipeline: testPipelineId
-    //                 },
-    //                 command: ['/opt/screwdriver/launch screwdriver-cd hashr addSD main']
-    //             },
-    //             headers: {
-    //                 'Content-Type': 'application/xml',
-    //                 [fakeCrumb.crumbRequestField]: fakeCrumb.crumb
-    //             }
-    //         };
-    //
-    //         executor.createJob({
-    //             host: 'jenkins',
-    //             name: 'sampleMilano',
-    //             scmUrl: 'git@github.com:screwdriver-cd/hashr.git#addSD',
-    //             secretToken: 'secretToken'
-    //         }, (err) => {
-    //             assert.isNull(err);
-    //             assert.calledOnce(breakRunMock);
-    //             assert.calledWith(breakRunMock, postConfig);
-    //             done();
-    //         });
-    //     });
-    // });
+    describe('createJob', () => {
+        beforeEach(() => {
+            mockery.registerMock('getCrumb', getCrumbMock);
+        });
+
+        it('return 200 when the job is successfully created', (done) => {
+            requestMock.yieldsAsync(null, fakeCrumb);
+            getCrumbMock.yieldsAsync(null, fakeCrumb.body);
+            jenkinInitMock.returns(jenkinsMock);
+            jenkinsMock.job.create.yieldsAsync(null);
+
+            executor.createJob((err) => {
+                assert.isNull(err);
+                assert.calledOnce(jenkinInitMock);
+                assert.calledOnce(jenkinsMock.job.create);
+                done();
+            });
+        });
+
+        it('return error when request responds with error', (done) => {
+            const error = new Error('T_T');
+
+            requestMock.yieldsAsync(error);
+
+            executor.getCrumb((err) => {
+                assert.deepEqual(err, error);
+                done();
+            });
+        });
+
+        it('return error when request responds with non 200 status code', (done) => {
+            requestMock.yieldsAsync(null, {
+                statusCode: 201,
+                body: {
+                    any: 'thing'
+                }
+            });
+
+            executor.getCrumb((err, response) => {
+                assert.deepEqual(err.message, 'Failed to get crumb: {"any":"thing"}');
+                assert.isNotOk(response);
+                done();
+            });
+        });
+    });
 
     describe('start', () => {
         beforeEach(() => {

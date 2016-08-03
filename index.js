@@ -22,8 +22,8 @@ class J5sExecutor extends Executor {
         this.username = options.username;
         this.password = options.password;
         // need to pass port nubmer in the future
-        this.crumbUrl =
-    `http://${this.username}:${this.password}@${this.host}:8080/crumbIssuer/api/json`;
+        this.baseUrl = `http://${this.username}:${this.password}@${this.host}:8080`;
+        this.crumbUrl = this.baseUrl.concat('/crumbIssuer/api/json');
     }
 
     /**
@@ -38,10 +38,11 @@ class J5sExecutor extends Executor {
         };
 
         request(options, (error, response) => {
-            if (error) return callback(new Error(error.message));
+            if (error) { return callback(new Error(error.message)); }
 
             if (response.statusCode !== 200) {
-                const msg = `Failed to get crumb: ${JSON.stringify(response.body)}`;
+                const msg = `${response.statusCode}
+                Failed to get crumb: ${JSON.stringify(response.body)}`;
 
                 return callback(new Error(msg));
             }
@@ -53,104 +54,27 @@ class J5sExecutor extends Executor {
     /**
      * Initialize the jenkins client with crumb
      * @method initJenkinsClient
-     * @param  crumb                        CSRF token from jenkins api
+     * @param  {Object}   crumb             CSRF token from jenkins api
      * @param  {Function} callback          Callback with error and jenkins client object
      */
     initJenkinsClient(crumb, callback) {
         const data = JSON.parse(crumb);
 
         const jenkinsClient = jenkins({
-            baseUrl: `http://${this.username}:${this.password}@${this.host}:8080`,
+            baseUrl: this.baseUrl,
             headers: {
                 [data.crumbRequestField]: data.crumb
             }
         });
 
-        return callback(null, jenkinsClient);
-    }
+        if (jenkinsClient) { return callback(null, jenkinsClient); }
 
-    /**
-     * Read xml config file from configPath, create a jenkins job with jobName and start the build
-     * @method readConfigAndCreateJob
-     * @param  jenkinsClient                jenkinsClient object
-     * @param  jobName                      Name of the new jenkins job
-     * @param  configPath                   Path of the config xml file
-     * @param  {Function} callback          Callback with null if successful otherwise error
-     */
-    readConfigAndCreateJob(jenkinsClient, jobName, configPath, callback) {
-        const xml = fs.readFileSync(configPath, 'utf-8');
-        const create = jenkinsClient.job.create.bind(jenkinsClient.job);
-        const build = jenkinsClient.job.build.bind(jenkinsClient.job);
-
-        async.waterfall([
-            async.apply(create, jobName, xml),
-            async.apply(build, jobName)
-        ], (err) => {
-            if (err) return callback(new Error(err.message));
-
-            return callback(null);
-        });
-    }
-
-    /**
-     * Get last build of the job with the given name and stop it
-     * @method stopCurrentBuild
-     * @param  jenkinsClient                jenkinsClient object
-     * @param  jobName                      Name of the new jenkins job
-     * @param  {Function} callback          Callback with null if successful otherwise error
-     */
-    stopCurrentBuild(jenkinsClient, jobName, callback) {
-        const get = jenkinsClient.job.get.bind(jenkinsClient.job);
-        const stop = jenkinsClient.build.stop.bind(jenkinsClient.build);
-
-        async.waterfall([
-            async.apply(get, jobName),
-            (data, cb) => {
-                try {
-                    cb(null, data.lastBuild.number);
-                } catch (e) {
-                    cb(e);
-                }
-            },
-            async.apply(stop, jobName)
-        ], (err) => {
-            if (err) return callback(err);
-
-            return callback(null);
-        });
-    }
-
-    /**
-     * Get last build of the job with the given name and get the log of it
-     * @method getBuildLog
-     * @param  jenkinsClient                jenkinsClient object
-     * @param  jobName                      Name of the new jenkins job
-     * @param  {Function} callback          Callback with error and data
-     */
-    getBuildLog(jenkinsClient, jobName, callback) {
-        const get = jenkinsClient.job.get.bind(jenkinsClient.job);
-        const log = jenkinsClient.build.log.bind(jenkinsClient.build);
-
-        async.waterfall([
-            async.apply(get, jobName),
-            (data, cb) => {
-                try {
-                    cb(null, data.lastBuild.number);
-                } catch (e) {
-                    cb(e);
-                }
-            },
-            async.apply(log, jobName)
-        ], (err, data) => {
-            if (err) return callback(err);
-
-            return callback(null, data);
-        });
+        return callback(new Error('Failed to instantiate jenkins client'));
     }
 
     /**
      * Create a jenkins job and start the build
-     * @method createJob
+     * @method _start
      * @param  {Object}   config            A configuration object
      * @param  {String}   config.buildId    ID for the build and also name of the job in jenkins
      * @param  {String}   config.jobId      ID for the job
@@ -161,17 +85,25 @@ class J5sExecutor extends Executor {
      */
     _start(config, callback) {
         const fakeConfigPath = path.resolve(__dirname, './config/test-job.xml');
+        const xml = fs.readFileSync(fakeConfigPath, 'utf-8');
 
         async.waterfall([
             this.getCrumb.bind(this),
             this.initJenkinsClient.bind(this),
-            /* eslint-disable arrow-body-style */
             (jenkinsClient, cb) => {
-                return this.readConfigAndCreateJob(jenkinsClient,
-                    config.buildId, fakeConfigPath, cb);
+                const create = jenkinsClient.job.create.bind(jenkinsClient.job);
+
+                return create(config.buildId, xml, (err) => {
+                    cb(err, jenkinsClient);
+                });
+            },
+            (jenkinsClient, cb) => {
+                const build = jenkinsClient.job.build.bind(jenkinsClient.job);
+
+                return build(config.buildId, cb);
             }
         ], (error) => {
-            if (error) return callback(error);
+            if (error) return callback(new Error(error.message));
 
             return callback(null);
         });
@@ -179,7 +111,7 @@ class J5sExecutor extends Executor {
 
     /**
      * Stop the build
-     * @method createJob
+     * @method stop
      * @param  {Object}   config            A configuration object
      * @param  {String}   config.buildId    ID for the build and also name of the job in jenkins
      * @param  {Function} callback          Callback with null if successful otherwise error
@@ -188,13 +120,24 @@ class J5sExecutor extends Executor {
         async.waterfall([
             this.getCrumb.bind(this),
             this.initJenkinsClient.bind(this),
-            /* eslint-disable arrow-body-style */
             (jenkinsClient, cb) => {
-                return this.stopCurrentBuild(jenkinsClient,
-                    config.buildId, cb);
+                const get = jenkinsClient.job.get.bind(jenkinsClient.job);
+
+                return get(config.buildId, (err, data) => {
+                    try {
+                        cb(err, jenkinsClient, data.lastBuild.number);
+                    } catch (e) {
+                        cb(e);
+                    }
+                });
+            },
+            (jenkinsClient, buildNumber, cb) => {
+                const stop = jenkinsClient.build.stop.bind(jenkinsClient.build);
+
+                return stop(config.buildId, buildNumber, cb);
             }
         ], (error) => {
-            if (error) return callback(error);
+            if (error) return callback(new Error(error.message));
 
             return callback(null);
         });
@@ -211,13 +154,24 @@ class J5sExecutor extends Executor {
         async.waterfall([
             this.getCrumb.bind(this),
             this.initJenkinsClient.bind(this),
-            /* eslint-disable arrow-body-style */
             (jenkinsClient, cb) => {
-                return this.getBuildLog(jenkinsClient,
-                    config.buildId, cb);
+                const get = jenkinsClient.job.get.bind(jenkinsClient.job);
+
+                return get(config.buildId, (err, data) => {
+                    try {
+                        cb(err, jenkinsClient, data.lastBuild.number);
+                    } catch (e) {
+                        cb(e);
+                    }
+                });
+            },
+            (jenkinsClient, buildNumber, cb) => {
+                const log = jenkinsClient.build.log.bind(jenkinsClient.build);
+
+                return log(config.buildId, buildNumber, cb);
             }
         ], (error, log) => {
-            if (error) return callback(error);
+            if (error) return callback(new Error(error.message));
 
             return callback(null, log);
         });

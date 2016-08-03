@@ -19,7 +19,7 @@ The class provides a couple options that are configurable in the instantiation o
 | :-------------   | :---- | :-------------|
 | config        | Object | Configuration Object |
 | config.username | String | The username for Jenkins cluster  |
-| config.password | String | The password for Jenkins cluster  |
+| config.password | String | The password or token for Jenkins cluster  |
 | config.host | String | The hostname for the Jenkins cluster |
 
 ### Start

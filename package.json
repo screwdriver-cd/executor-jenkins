@@ -1,6 +1,6 @@
 {
   "name": "screwdriver-executor-j5s",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "description": "Jenkins Executor plugin for Screwdriver",
   "main": "index.js",
   "scripts": {
@@ -24,8 +24,8 @@
     "Dao Lam <daolam112@gmail.com>",
     "Darren Matsumoto <aeneascorrupt@gmail.com>",
     "Jeremiah Wuenschel <jeremiah.wuenschel@gmail.com>",
-    "Noah Katzman <nbkatzman@gmail.com>",
     "Min Zhang <minzhang@andrew.cmu.edu>",
+    "Noah Katzman <nbkatzman@gmail.com>",
     "Peter Peterson <jedipetey@gmail.com>",
     "St. John Johnson <st.john.johnson@gmail.com",
     "Tiffany Kyi <tiffanykyi@gmail.com>"

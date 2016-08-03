@@ -1,19 +1,10 @@
 'use strict';
 const Executor = require('screwdriver-executor-base');
 const path = require('path');
-const Readable = require('stream').Readable;
-// const Fusebox = require('circuit-fuses');
 const request = require('request');
-const tinytim = require('tinytim');
-const yaml = require('js-yaml');
-const hoek = require('hoek');
 const jenkins = require('jenkins');
 const fs = require('fs');
 const async = require('async');
-const SCM_URL_REGEX = /^git@([^:]+):([^\/]+)\/(.+?)\.git(#.+)?$/;
-const GIT_ORG = 2;
-const GIT_REPO = 3;
-const GIT_BRANCH = 4;
 
 class J5sExecutor extends Executor {
 
@@ -21,7 +12,6 @@ class J5sExecutor extends Executor {
      * Constructor
      * @method constructor
      * @param  {Object} options           Configuration options
-     * @param  {Object} options.token     Api Token to make requests with
      * @param  {Object} options.host      Jenkins hostname to make requests to
      * @param  {Object} options.username  Jenkins username
      * @param  {Object} options.password  Jenkins password/token
@@ -33,13 +23,13 @@ class J5sExecutor extends Executor {
         this.password = options.password;
         // need to pass port nubmer in the future
         this.crumbUrl =
-    `https://${this.username}:${this.password}@${this.host}:8080/crumbIssuer/api/json`;
+    `http://${this.username}:${this.password}@${this.host}:8080/crumbIssuer/api/json`;
     }
 
     /**
      * Get CSRF token crumb for Jenkins
      * @method getCrumb
-     * @param  {Function} callback          Callback with crumb object
+     * @param  {Function} callback          Callback with error and crumb object
      */
     getCrumb(callback) {
         const options = {
@@ -48,7 +38,7 @@ class J5sExecutor extends Executor {
         };
 
         request(options, (error, response) => {
-            if (error) return callback(new Error(error));
+            if (error) return callback(new Error(error.message));
 
             if (response.statusCode !== 200) {
                 const msg = `Failed to get crumb: ${JSON.stringify(response.body)}`;
@@ -64,13 +54,15 @@ class J5sExecutor extends Executor {
      * Initialize the jenkins client with crumb
      * @method initJenkinsClient
      * @param  crumb                        CSRF token from jenkins api
-     * @param  {Function} callback          Callback with jenkins client object
+     * @param  {Function} callback          Callback with error and jenkins client object
      */
     initJenkinsClient(crumb, callback) {
+        const data = JSON.parse(crumb);
+
         const jenkinsClient = jenkins({
             baseUrl: `http://${this.username}:${this.password}@${this.host}:8080`,
             headers: {
-                [crumb.crumbRequestField]: crumb.crumb
+                [data.crumbRequestField]: data.crumb
             }
         });
 
@@ -78,45 +70,105 @@ class J5sExecutor extends Executor {
     }
 
     /**
-     * Read config file from configPath and create a jenkins job with jobName
+     * Read xml config file from configPath, create a jenkins job with jobName and start the build
      * @method readConfigAndCreateJob
      * @param  jenkinsClient                jenkinsClient object
      * @param  jobName                      Name of the new jenkins job
      * @param  configPath                   Path of the config xml file
-     * @param  {Function} callback          Callback with null if sucessful otherwise error
+     * @param  {Function} callback          Callback with null if successful otherwise error
      */
     readConfigAndCreateJob(jenkinsClient, jobName, configPath, callback) {
         const xml = fs.readFileSync(configPath, 'utf-8');
+        const create = jenkinsClient.job.create.bind(jenkinsClient.job);
+        const build = jenkinsClient.job.build.bind(jenkinsClient.job);
 
-        jenkinsClient.job.create(jobName, xml, (errors, response) => {
-            if (errors) return callback(new Error(errors));
-
-            if (response.statusCode !== 200) {
-                const msg = `Failed to create job: ${response.statusCode}`
-                 + `: ${JSON.stringify(response.body)}`;
-
-                return callback(new Error(msg));
-            }
+        async.waterfall([
+            async.apply(create, jobName, xml),
+            async.apply(build, jobName)
+        ], (err) => {
+            if (err) return callback(new Error(err.message));
 
             return callback(null);
         });
     }
 
     /**
-     * Create a jenkins job
-     * @method createJob
+     * Get last build of the job with the given name and stop it
+     * @method stopCurrentBuild
+     * @param  jenkinsClient                jenkinsClient object
+     * @param  jobName                      Name of the new jenkins job
      * @param  {Function} callback          Callback with null if successful otherwise error
      */
-    createJob(callback) {
-        const fakeJobName = 'Hello';
+    stopCurrentBuild(jenkinsClient, jobName, callback) {
+        const get = jenkinsClient.job.get.bind(jenkinsClient.job);
+        const stop = jenkinsClient.build.stop.bind(jenkinsClient.build);
+
+        async.waterfall([
+            async.apply(get, jobName),
+            (data, cb) => {
+                try {
+                    cb(null, data.lastBuild.number);
+                } catch (e) {
+                    cb(e);
+                }
+            },
+            async.apply(stop, jobName)
+        ], (err) => {
+            if (err) return callback(err);
+
+            return callback(null);
+        });
+    }
+
+    /**
+     * Get last build of the job with the given name and get the log of it
+     * @method getBuildLog
+     * @param  jenkinsClient                jenkinsClient object
+     * @param  jobName                      Name of the new jenkins job
+     * @param  {Function} callback          Callback with error and data
+     */
+    getBuildLog(jenkinsClient, jobName, callback) {
+        const get = jenkinsClient.job.get.bind(jenkinsClient.job);
+        const log = jenkinsClient.build.log.bind(jenkinsClient.build);
+
+        async.waterfall([
+            async.apply(get, jobName),
+            (data, cb) => {
+                try {
+                    cb(null, data.lastBuild.number);
+                } catch (e) {
+                    cb(e);
+                }
+            },
+            async.apply(log, jobName)
+        ], (err, data) => {
+            if (err) return callback(err);
+
+            return callback(null, data);
+        });
+    }
+
+    /**
+     * Create a jenkins job and start the build
+     * @method createJob
+     * @param  {Object}   config            A configuration object
+     * @param  {String}   config.buildId    ID for the build and also name of the job in jenkins
+     * @param  {String}   config.jobId      ID for the job
+     * @param  {String}   config.pipelineId ID for the pipeline
+     * @param  {String}   config.container  Container for the build to run in
+     * @param  {String}   config.scmUrl     Scm URL to use in the build
+     * @param  {Function} callback          Callback with null if successful otherwise error
+     */
+    _start(config, callback) {
         const fakeConfigPath = path.resolve(__dirname, './config/test-job.xml');
 
         async.waterfall([
-            this.getCrumb,
-            this.initJenkinsClient,
+            this.getCrumb.bind(this),
+            this.initJenkinsClient.bind(this),
             /* eslint-disable arrow-body-style */
             (jenkinsClient, cb) => {
-                return this.readConfigAndCreateJob(jenkinsClient, fakeJobName, fakeConfigPath, cb);
+                return this.readConfigAndCreateJob(jenkinsClient,
+                    config.buildId, fakeConfigPath, cb);
             }
         ], (error) => {
             if (error) return callback(error);
@@ -126,49 +178,23 @@ class J5sExecutor extends Executor {
     }
 
     /**
-     * Create Jenkins Job & Starts a build
-     * @method start
+     * Stop the build
+     * @method createJob
      * @param  {Object}   config            A configuration object
-
-     * @param  {String}   config.buildId    ID for the build
-     * @param  {String}   config.jobId      ID for the job
-     * @param  {String}   config.pipelineId ID for the pipeline
-     * @param  {String}   config.container  Container for the build to run in
-     * @param  {String}   config.scmUrl     Scm URL to use in the build
-     * @param  {Function} callback          Callback function
+     * @param  {String}   config.buildId    ID for the build and also name of the job in jenkins
+     * @param  {Function} callback          Callback with null if successful otherwise error
      */
-    _start(config, callback) {
-        const scmMatch = SCM_URL_REGEX.exec(config.scmUrl);
-        const jobTemplate = tinytim.renderFile(path.resolve(__dirname, './config/job.yaml.tim'), {
-            git_org: scmMatch[GIT_ORG],
-            git_repo: scmMatch[GIT_REPO],
-            git_branch: (scmMatch[GIT_BRANCH] || '#master').slice(1),
-            job_name: 'main',
-            build_id: config.buildId,
-            job_id: config.jobId,
-            pipeline_id: config.pipelineId
-        });
-
-        const options = {
-            uri: this.jobsUrl,
-            method: 'POST',
-            json: yaml.safeLoad(jobTemplate),
-            headers: {
-                Authorization: `Bearer ${this.token}`
-            },
-            strictSSL: false
-        };
-
-        this.breaker.runCommand(options, (err, resp) => {
-            if (err) {
-                return callback(err);
+    _stop(config, callback) {
+        async.waterfall([
+            this.getCrumb.bind(this),
+            this.initJenkinsClient.bind(this),
+            /* eslint-disable arrow-body-style */
+            (jenkinsClient, cb) => {
+                return this.stopCurrentBuild(jenkinsClient,
+                    config.buildId, cb);
             }
-
-            if (resp.statusCode !== 201) {
-                const msg = `Failed to create job: ${JSON.stringify(resp.body)}`;
-
-                return callback(new Error(msg));
-            }
+        ], (error) => {
+            if (error) return callback(error);
 
             return callback(null);
         });
@@ -179,39 +205,21 @@ class J5sExecutor extends Executor {
     * @method stream
     * @param  {Object}   config            A configuration object
     * @param  {String}   config.buildId    ID for the build
-    * @param  {Response} callback          Callback for when a stream is created
+    * @param  {Response} callback          Callback with error and data
     */
     _stream(config, callback) {
-        const pod = `${this.podsUrl}?labelSelector=sdbuild=${config.buildId}`;
-        const options = {
-            url: pod,
-            headers: {
-                Authorization: `Bearer ${this.token}`
-            },
-            json: true,
-            strictSSL: false
-        };
-
-        this.breaker.runCommand(options, (err, resp) => {
-            if (err) {
-                return callback(new Error(`Error getting pod with sdbuild=${config.buildId}`));
+        async.waterfall([
+            this.getCrumb.bind(this),
+            this.initJenkinsClient.bind(this),
+            /* eslint-disable arrow-body-style */
+            (jenkinsClient, cb) => {
+                return this.getBuildLog(jenkinsClient,
+                    config.buildId, cb);
             }
+        ], (error, log) => {
+            if (error) return callback(error);
 
-            const body = resp.body;
-            const podName = hoek.reach(body, 'items.0.metadata.name');
-
-            if (!podName) {
-                return callback(new Error(`Error getting pod name: ${JSON.stringify(body)}`));
-            }
-            const logUrl = `${this.podsUrl}/${podName}/log?container=build&follow=true&pretty=true`;
-
-            return callback(null, new Readable().wrap(request.get({
-                url: logUrl,
-                headers: {
-                    Authorization: `Bearer ${this.token}`
-                },
-                strictSSL: false
-            })));
+            return callback(null, log);
         });
     }
 }

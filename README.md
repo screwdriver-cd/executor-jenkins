@@ -18,8 +18,9 @@ The class provides a couple options that are configurable in the instantiation o
 | Parameter        | Type  |  Description |
 | :-------------   | :---- | :-------------|
 | config        | Object | Configuration Object |
-#| config.token | String | The JWT token used for authenticating to the Jenkins cluster |
-| config.host | String | The hostname for the Jenkins cluster i.e. `jenkins` if running inside Jenkins |
+| config.username | String | The username for Jenkins cluster  |
+| config.password | String | The password for Jenkins cluster  |
+| config.host | String | The hostname for the Jenkins cluster |
 
 ### Start
 The `_start` method takes advantage of the input validation defined in the [executor-base-class].
@@ -44,6 +45,21 @@ The `_start` function will start a job in Jenkins with labels for easy lookup. T
 The job runs two containers:
 * Runs the [screwdriver job-tools] container, sharing the files in `/opt/screwdriver`
 * Runs the specified container (As of 7/21, only runs `node:4`), which runs `/opt/screwdriver/launch` with the required parameters
+
+The callback is called with:
+* An error `callback(err)` when an error occurs starting the job
+* null `callback(null)` when a job is correctly started
+
+### Stop
+The parameters required are:
+
+| Parameter        | Type  |  Description |
+| :-------------   | :---- | :-------------|
+| config        | Object | Configuration Object |
+| config.buildId | String | The unique ID for a build to stream logs for|
+| callback | Function | Callback `fn(err)` for when stream has been created |
+
+The `_stop` function will stop last build of the job with  config.buildId in jenkins.
 
 The callback is called with:
 * An error `callback(err)` when an error occurs starting the job

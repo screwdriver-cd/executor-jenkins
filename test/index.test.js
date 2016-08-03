@@ -6,64 +6,17 @@ const mockery = require('mockery');
 
 sinon.assert.expose(assert, { prefix: '' });
 
-const TEST_XML =
-`<project>
-<description/>
-<keepDependencies>false</keepDependencies>
-<properties/>
-<scm class="hudson.scm.NullSCM"/>
-<canRoam>true</canRoam>
-<disabled>false</disabled>
-<blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
-<blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
-<triggers/>
-<concurrentBuild>false</concurrentBuild>
-<builders>
-<hudson.tasks.Shell>
-<command>echo 'Hello World'</command>
-</hudson.tasks.Shell>
-</builders>
-<publishers/>
-<buildWrappers/>
-</project>
-`;
-
-/**
- * Stub for Readable wrapper
- * @method ReadableMock
- */
-function ReadableMock() {}
-/**
- * Stub for circuit-fuses wrapper
- * @method BreakerMock
- */
-function BreakerMock() {}
-//
-// function ExecutorFactoryMock() {}
-
 describe('index', () => {
     let executor;
     let Executor;
     let requestMock;
-    let fsMock;
-    let pathMock;
-    let readableMock;
-    let breakRunMock;
     let getCrumbMock;
-    let jenkinsMock;
     let jenkinsClientMock;
     let initJenkinsClientMock;
     let readConfigAndCreateJobMock;
-    const testScmUrl = 'git@github.com:screwdriver-cd/hashr.git';
-    const testBuildId = 'build_ad11234tag41fda';
-    const testJobId = 'job_ad11234tag41fda';
-    const testPipelineId = 'pipeline_ad11234tag41fda';
-    const fakeResponse = {
-        statusCode: 201,
-        body: {
-            success: true
-        }
-    };
+    let stopCurrentBuildMock;
+    let getBuildLogMock;
+
     const fakeCrumb = {
         statusCode: 200,
         body: {
@@ -72,9 +25,20 @@ describe('index', () => {
             crumbRequestField: 'Jenkins-Crumb'
         }
     };
-    const crumbUrl = 'https://admin:fakepassword@jenkins:8080/crumbIssuer/api/json';
-    const jobsUrl = 'https://jenkins/apis/batch/v1/namespaces/default/jobs';
-    const podsUrl = 'https://jenkins/api/v1/namespaces/default/pods';
+
+    const crumbUrl = 'http://admin:fakepassword@jenkins:8080/crumbIssuer/api/json';
+
+    const config = {
+        buildId: '4b8d9b530d2e5e297b4f470d5b0a6e1310d29c5e',
+        jobId: '50dc14f719cdc2c9cb1fb0e49dd2acc4cf6189a0',
+        pipelineId: 'ccc49349d3cffbd12ea9e3d41521480b4aa5de5f',
+        container: 'node:4',
+        scmUrl: 'git@github.com:screwdriver-cd/data-model.git#master'
+    };
+
+    const buildIdConfig = {
+        buildId: '4b8d9b530d2e5e297b4f470d5b0a6e1310d29c5e'
+    };
 
     before(() => {
         mockery.enable({
@@ -86,52 +50,21 @@ describe('index', () => {
     beforeEach(() => {
         requestMock = sinon.stub();
 
-        fsMock = {
-            readFileSync: sinon.stub()
-        };
-
-        pathMock = {
-            resolve: sinon.stub()
-        };
-
-        readableMock = {
-            wrap: sinon.stub()
-        };
-
-        breakRunMock = sinon.stub();
-
         jenkinsClientMock = {
             job: {
-                create: sinon.stub()
+                create: sinon.stub(),
+                get: sinon.stub()
+            },
+            build: {
+                stop: sinon.stub(),
+                log: sinon.stub()
             }
         };
 
-        getCrumbMock = sinon.stub();
-
-        jenkinsMock = sinon.stub();
-
-        initJenkinsClientMock = sinon.stub();
-
-        readConfigAndCreateJobMock = sinon.stub();
-
-        BreakerMock.prototype.runCommand = breakRunMock;
-        ReadableMock.prototype.wrap = readableMock.wrap;
-
-        fsMock.readFileSync.yieldsAsync(null, TEST_XML);
-        pathMock.resolve.returns(null);
-
-        mockery.registerMock('stream', {
-            Readable: ReadableMock
-        });
-        mockery.registerMock('fs', fsMock);
-        mockery.registerMock('path', pathMock);
         mockery.registerMock('request', requestMock);
-        mockery.registerMock('circuit-fuses', BreakerMock);
-        mockery.registerMock('jenkins', jenkinsMock);
 
         /* eslint-disable global-require */
         Executor = require('../index');
-        /* eslint-enable global-require */
 
         executor = new Executor({
             host: 'jenkins',
@@ -151,17 +84,18 @@ describe('index', () => {
 
     it('extends base class', () => {
         assert.isFunction(executor.start);
-        assert.isFunction(executor.getCrumb);
-        assert.isFunction(executor.createJob);
+        assert.isFunction(executor.stream);
+        assert.isFunction(executor.stop);
     });
 
     describe('getCrumb', () => {
-        it('with correct url', (done) => {
-            requestMock.yieldsAsync(null, fakeCrumb);
+        it('return crumb object when request successes', (done) => {
             const crumbConfig = {
                 url: crumbUrl,
                 method: 'GET'
             };
+
+            requestMock.yieldsAsync(null, fakeCrumb);
 
             executor.getCrumb((err, response) => {
                 assert.isNull(err);
@@ -184,6 +118,8 @@ describe('index', () => {
         });
 
         it('return error when request responds with non 200 status code', (done) => {
+            const error = new Error('Failed to get crumb: {"any":"thing"}');
+
             requestMock.yieldsAsync(null, {
                 statusCode: 201,
                 body: {
@@ -192,14 +128,14 @@ describe('index', () => {
             });
 
             executor.getCrumb((err, response) => {
-                assert.deepEqual(err.message, 'Failed to get crumb: {"any":"thing"}');
+                assert.deepEqual(err, error);
                 assert.isNotOk(response);
                 done();
             });
         });
     });
 
-    describe('createJob', () => {
+    describe('start', () => {
         beforeEach(() => {
             getCrumbMock = sinon.stub(executor, 'getCrumb');
             initJenkinsClientMock = sinon.stub(executor, 'initJenkinsClient');
@@ -211,7 +147,7 @@ describe('index', () => {
             initJenkinsClientMock.yieldsAsync(null, jenkinsClientMock);
             readConfigAndCreateJobMock.yieldsAsync(null);
 
-            executor.createJob((err) => {
+            executor.start(config, (err) => {
                 assert.isNull(err);
                 assert.calledOnce(getCrumbMock);
                 assert.calledOnce(initJenkinsClientMock);
@@ -227,8 +163,8 @@ describe('index', () => {
             initJenkinsClientMock.yieldsAsync(null, null);
             readConfigAndCreateJobMock.yieldsAsync(null);
 
-            executor.createJob((err) => {
-                assert.deepEqual(err.message, error.message);
+            executor.start(config, (err) => {
+                assert.deepEqual(err, error);
                 done();
             });
         });
@@ -240,236 +176,146 @@ describe('index', () => {
             initJenkinsClientMock.yieldsAsync(error);
             readConfigAndCreateJobMock.yieldsAsync(null);
 
-            executor.createJob((err) => {
-                assert.deepEqual(err.message, error.message);
+            executor.start(config, (err) => {
+                assert.deepEqual(err, error);
                 done();
             });
         });
 
-        it.only('return error when readConfigAndCreateJob is getting error', (done) => {
+        it('return error when readConfigAndCreateJob is getting error', (done) => {
             const error = new Error('readConfigAndCreateJob error');
 
             getCrumbMock.yieldsAsync(null, fakeCrumb.body);
             initJenkinsClientMock.yieldsAsync(null, jenkinsClientMock);
             readConfigAndCreateJobMock.yieldsAsync(error);
 
-            executor.createJob((err) => {
-                assert.deepEqual(err.message, error.message);
-                done();
-            });
-        });
-
-        it('return error when request responds with non 200 status code', (done) => {
-            requestMock.yieldsAsync(null, {
-                statusCode: 201,
-                body: {
-                    any: 'thing'
-                }
-            });
-
-            executor.getCrumb((err, response) => {
-                assert.deepEqual(err.message, 'Failed to get crumb: {"any":"thing"}');
-                assert.isNotOk(response);
+            executor.start(config, (err) => {
+                assert.deepEqual(err, error);
                 done();
             });
         });
     });
 
-    describe('start', () => {
+    describe('stop', () => {
         beforeEach(() => {
-            breakRunMock.yieldsAsync(null, fakeResponse, fakeResponse.body);
+            getCrumbMock = sinon.stub(executor, 'getCrumb');
+            initJenkinsClientMock = sinon.stub(executor, 'initJenkinsClient');
+            stopCurrentBuildMock = sinon.stub(executor, 'stopCurrentBuild');
         });
 
-        describe('successful requests', () => {
-            it('with scmUrl containing branch', (done) => {
-                const postConfig = {
-                    uri: jobsUrl,
-                    method: 'POST',
-                    json: {
-                        metadata: {
-                            name: testBuildId,
-                            job: testJobId,
-                            pipeline: testPipelineId
-                        },
-                        command: ['/opt/screwdriver/launch screwdriver-cd hashr addSD main']
-                    },
-                    headers: {
-                        Authorization: 'Bearer api_key'
-                    },
-                    strictSSL: false
-                };
+        it('return null when the job is successfully stopped', (done) => {
+            getCrumbMock.yieldsAsync(null, fakeCrumb.body);
+            initJenkinsClientMock.yieldsAsync(null, jenkinsClientMock);
+            stopCurrentBuildMock.yieldsAsync(null);
 
-                executor.start({
-                    scmUrl: 'git@github.com:screwdriver-cd/hashr.git#addSD',
-                    buildId: testBuildId,
-                    jobId: testJobId,
-                    pipelineId: testPipelineId,
-                    container: 'container'
-                }, (err) => {
-                    assert.isNull(err);
-                    assert.calledOnce(breakRunMock);
-                    assert.calledWith(breakRunMock, postConfig);
-                    done();
-                });
-            });
-
-            it('with scmUrl without branch', (done) => {
-                const postConfig = {
-                    uri: jobsUrl,
-                    method: 'POST',
-                    json: {
-                        metadata: {
-                            name: testBuildId,
-                            job: testJobId,
-                            pipeline: testPipelineId
-                        },
-                        command: ['/opt/screwdriver/launch screwdriver-cd hashr master main']
-                    },
-                    headers: {
-                        Authorization: 'Bearer api_key'
-                    },
-                    strictSSL: false
-                };
-
-                executor.start({
-                    scmUrl: testScmUrl,
-                    buildId: testBuildId,
-                    jobId: testJobId,
-                    pipelineId: testPipelineId,
-                    container: 'container'
-                }, (err) => {
-                    assert.isNull(err);
-                    assert.calledOnce(breakRunMock);
-                    assert.calledWith(breakRunMock, postConfig);
-                    done();
-                });
+            executor.stop(buildIdConfig, (err) => {
+                assert.isNull(err);
+                assert.calledOnce(getCrumbMock);
+                assert.calledOnce(initJenkinsClientMock);
+                assert.calledOnce(stopCurrentBuildMock);
+                done();
             });
         });
 
-        it('returns error when request responds with error', (done) => {
-            const error = new Error('lol');
+        it('return error when getCrumbs is getting error', (done) => {
+            const error = new Error('getCrumb error');
 
-            breakRunMock.yieldsAsync(error);
+            getCrumbMock.yieldsAsync(error);
+            initJenkinsClientMock.yieldsAsync(null, null);
+            stopCurrentBuildMock.yieldsAsync(null);
 
-            executor.start({
-                scmUrl: testScmUrl,
-                buildId: testBuildId,
-                jobId: testJobId,
-                pipelineId: testPipelineId,
-                container: 'container'
-            }, (err) => {
+            executor.stop(buildIdConfig, (err) => {
                 assert.deepEqual(err, error);
                 done();
             });
         });
 
-        it('returns body when request responds with error in response', (done) => {
-            const returnResponse = {
-                statusCode: 500,
-                body: {
-                    statusCode: 500,
-                    message: 'lol'
-                }
-            };
-            const returnMessage = `Failed to create job: ${JSON.stringify(returnResponse.body)}`;
+        it('return error when initJenkinsClient is getting error', (done) => {
+            const error = new Error('initJenkinsClient error');
 
-            breakRunMock.yieldsAsync(null, returnResponse);
+            getCrumbMock.yieldsAsync(null, fakeCrumb.body);
+            initJenkinsClientMock.yieldsAsync(error);
+            stopCurrentBuildMock.yieldsAsync(null);
 
-            executor.start({
-                scmUrl: testScmUrl,
-                buildId: testBuildId,
-                jobId: testJobId,
-                pipelineId: testPipelineId,
-                container: 'container'
-            }, (err, response) => {
-                assert.notOk(response);
-                assert.equal(err.message, returnMessage);
+            executor.stop(buildIdConfig, (err) => {
+                assert.deepEqual(err, error);
+                done();
+            });
+        });
+
+        it('return error when stopCurrentBuild is getting error', (done) => {
+            const error = new Error('stopCurrentBuild error');
+
+            getCrumbMock.yieldsAsync(null, fakeCrumb.body);
+            initJenkinsClientMock.yieldsAsync(null, jenkinsClientMock);
+            stopCurrentBuildMock.yieldsAsync(error);
+
+            executor.stop(buildIdConfig, (err) => {
+                assert.deepEqual(err, error);
                 done();
             });
         });
     });
 
     describe('stream', () => {
-        const pod = `${podsUrl}?labelSelector=sdbuild=${testBuildId}`;
-        const logUrl = `${podsUrl}/mypod/log?container=build&follow=true&pretty=true`;
-
-        it('reply with error when it fails to get pod', (done) => {
-            const error = new Error('lol');
-
-            breakRunMock.yieldsAsync(error);
-            executor.stream({
-                buildId: testBuildId
-            }, (err) => {
-                assert.isOk(err);
-                done();
-            });
+        beforeEach(() => {
+            getCrumbMock = sinon.stub(executor, 'getCrumb');
+            initJenkinsClientMock = sinon.stub(executor, 'initJenkinsClient');
+            getBuildLogMock = sinon.stub(executor, 'getBuildLog');
         });
 
-        it('reply with error when podname is not found', (done) => {
-            const returnResponse = {
-                statusCode: 200,
-                body: {
-                    items: []
-                }
-            };
+        it('return log when the the build is successfully streamed', (done) => {
+            const log = 'echo "hello world"';
 
-            breakRunMock.yieldsAsync(null, returnResponse);
-            executor.stream({
-                buildId: testBuildId
-            }, (err) => {
-                assert.isOk(err);
-                done();
-            });
-        });
+            getCrumbMock.yieldsAsync(null, fakeCrumb.body);
+            initJenkinsClientMock.yieldsAsync(null, jenkinsClientMock);
+            getBuildLogMock.yieldsAsync(null, log);
 
-        it('stream logs when podname is found', (done) => {
-            const getConfig = {
-                url: pod,
-                json: true,
-                headers: {
-                    Authorization: 'Bearer api_key'
-                },
-                strictSSL: false
-            };
-            const logConfig = {
-                url: logUrl,
-                headers: {
-                    Authorization: 'Bearer api_key'
-                },
-                strictSSL: false
-            };
-            const returnResponse = {
-                statusCode: 200,
-                body: {
-                    items: [{
-                        metadata: {
-                            name: 'mypod'
-                        }
-                    }]
-                }
-            };
-            const logGetMock = {
-                mock: 'thing'
-            };
-            const readWrapMock = {
-                mock: 'thing2'
-            };
-
-            breakRunMock.withArgs(getConfig)
-                .yieldsAsync(null, returnResponse);
-            requestMock.get.withArgs(logConfig).returns(logGetMock);
-            readableMock.wrap.returns(readWrapMock);
-
-            executor.stream({
-                buildId: testBuildId
-            }, (err, stream) => {
+            executor.stream(buildIdConfig, (err, data) => {
                 assert.isNull(err);
-                assert.calledOnce(breakRunMock);
-                assert.calledOnce(requestMock.get);
-                assert.calledWith(breakRunMock, getConfig);
-                assert.calledWith(requestMock.get, logConfig);
-                assert.calledWith(readableMock.wrap, logGetMock);
-                assert.deepEqual(stream, readWrapMock);
+                assert.calledOnce(getCrumbMock);
+                assert.calledOnce(initJenkinsClientMock);
+                assert.calledOnce(getBuildLogMock);
+                assert.deepEqual(data, log);
+                done();
+            });
+        });
+
+        it('return error when getCrumbs is getting error', (done) => {
+            const error = new Error('getCrumb error');
+
+            getCrumbMock.yieldsAsync(error);
+            initJenkinsClientMock.yieldsAsync(null, null);
+            getBuildLogMock.yieldsAsync(null);
+
+            executor.stream(buildIdConfig, (err) => {
+                assert.deepEqual(err, error);
+                done();
+            });
+        });
+
+        it('return error when initJenkinsClient is getting error', (done) => {
+            const error = new Error('initJenkinsClient error');
+
+            getCrumbMock.yieldsAsync(null, fakeCrumb.body);
+            initJenkinsClientMock.yieldsAsync(error);
+            getBuildLogMock.yieldsAsync(null);
+
+            executor.stream(buildIdConfig, (err) => {
+                assert.deepEqual(err, error);
+                done();
+            });
+        });
+
+        it('return error when getBuildLog is getting error', (done) => {
+            const error = new Error('getBuildLog error');
+
+            getCrumbMock.yieldsAsync(null, fakeCrumb.body);
+            initJenkinsClientMock.yieldsAsync(null, jenkinsClientMock);
+            getBuildLogMock.yieldsAsync(error);
+
+            executor.stream(buildIdConfig, (err) => {
+                assert.deepEqual(err, error);
                 done();
             });
         });

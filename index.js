@@ -40,7 +40,8 @@ class J5sExecutor extends Executor {
         request(options, (error, response) => {
             if (error) return callback(new Error(error.message));
             if (response.statusCode !== 200) {
-                const msg = `Failed to get crumb: ${JSON.stringify(response.body)}`;
+                const msg = `${response.statusCode}
+                Failed to get crumb: ${JSON.stringify(response.body)}`;
 
                 return callback(new Error(msg));
             }
@@ -52,7 +53,7 @@ class J5sExecutor extends Executor {
     /**
      * Initialize the jenkins client with crumb
      * @method initJenkinsClient
-     * @param  crumb                        CSRF token from jenkins api
+     * @param  {Object}   crumb             CSRF token from jenkins api
      * @param  {Function} callback          Callback with error and jenkins client object
      */
     initJenkinsClient(crumb, callback) {
@@ -136,7 +137,6 @@ class J5sExecutor extends Executor {
         async.waterfall([
             this.getCrumb.bind(this),
             this.initJenkinsClient.bind(this),
-            /* eslint-disable arrow-body-style */
             (jenkinsClient, cb) => {
                 return this.getBuildNumber(config.buildId, jenkinsClient, cb);
             },
@@ -163,7 +163,6 @@ class J5sExecutor extends Executor {
         async.waterfall([
             this.getCrumb.bind(this),
             this.initJenkinsClient.bind(this),
-            /* eslint-disable arrow-body-style */
             (jenkinsClient, cb) => {
                 return this.getBuildNumber(config.buildId, jenkinsClient, cb);
             },

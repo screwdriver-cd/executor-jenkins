@@ -12,10 +12,14 @@
 <builders>
 <hudson.tasks.Shell>
 <<<<<<< HEAD
+<<<<<<< HEAD
 <command>sleep 100 | echo 'Hello, I am going to sleep for 100s!'</command>
 =======
 <command>echo 'Hello World'</command>
 >>>>>>> 7e20056... Add createJob method
+=======
+<command>sleep 100 | echo 'Hello, I am going to sleep for 100s!'</command>
+>>>>>>> 81e72f3... add stop and stream methods
 </hudson.tasks.Shell>
 </builders>
 <publishers/>

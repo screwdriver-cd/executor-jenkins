@@ -34,6 +34,7 @@ describe('index', () => {
     let jenkinsMock;
     let requestMock;
     let getCrumbMock;
+    let getBuildNumberMock;
     let jenkinsClientMock;
     let initJenkinsClientMock;
 
@@ -65,6 +66,10 @@ describe('index', () => {
             number: 1
         }
     };
+
+    const buildNumber = fakeJobInfo.lastBuild.number;
+
+    const jobName = config.buildId;
 
     before(() => {
         mockery.enable({
@@ -102,6 +107,7 @@ describe('index', () => {
 
         /* eslint-disable global-require */
         Executor = require('../index');
+        /* eslint-enable global-require */
 
         executor = new Executor({
             host: 'jenkins',
@@ -204,6 +210,33 @@ describe('index', () => {
         });
     });
 
+    describe('getBuildNumber', () => {
+        it('return build number of the last build of the given job', (done) => {
+            jenkinsClientMock.job.get.yieldsAsync(null, fakeJobInfo);
+
+            executor.getBuildNumber(jobName, jenkinsClientMock,
+                 (err, jenkinsClient, buildNumberData) => {
+                     assert.isNull(err);
+                     assert.calledOnce(jenkinsClientMock.job.get);
+                     assert.calledWith(jenkinsClientMock.job.get, jobName);
+                     assert.deepEqual(buildNumberData, buildNumber);
+                     done();
+                 });
+        });
+
+        it('return error when jenkinsClientMock.job.get is getting error', (done) => {
+            const error = new Error('jenkinsClientMock.job.get error');
+
+            jenkinsClientMock.job.get.yieldsAsync(error);
+
+            executor.getBuildNumber(jobName, jenkinsClientMock,
+                 (err) => {
+                     assert.deepEqual(err, error);
+                     done();
+                 });
+        });
+    });
+
     describe('start', () => {
         beforeEach(() => {
             getCrumbMock = sinon.stub(executor, 'getCrumb');
@@ -222,9 +255,9 @@ describe('index', () => {
                 assert.calledOnce(initJenkinsClientMock);
                 assert.calledOnce(fsMock.readFileSync);
                 assert.calledOnce(jenkinsClientMock.job.create);
-                assert.calledWith(jenkinsClientMock.job.create, config.buildId, TEST_XML);
+                assert.calledWith(jenkinsClientMock.job.create, jobName, TEST_XML);
                 assert.calledOnce(jenkinsClientMock.job.build);
-                assert.calledWith(jenkinsClientMock.job.build, config.buildId);
+                assert.calledWith(jenkinsClientMock.job.build, jobName);
                 done();
             });
         });
@@ -290,23 +323,24 @@ describe('index', () => {
         beforeEach(() => {
             getCrumbMock = sinon.stub(executor, 'getCrumb');
             initJenkinsClientMock = sinon.stub(executor, 'initJenkinsClient');
+            getBuildNumberMock = sinon.stub(executor, 'getBuildNumber');
         });
 
         it('return null when the job is successfully stopped', (done) => {
             getCrumbMock.yieldsAsync(null, fakeCrumb.body);
             initJenkinsClientMock.yieldsAsync(null, jenkinsClientMock);
-            jenkinsClientMock.job.get.yieldsAsync(null, fakeJobInfo);
+            getBuildNumberMock.yieldsAsync(null, jenkinsClientMock, buildNumber);
             jenkinsClientMock.build.stop.yieldsAsync(null);
 
             executor.stop(buildIdConfig, (err) => {
                 assert.isNull(err);
                 assert.calledOnce(getCrumbMock);
                 assert.calledOnce(initJenkinsClientMock);
-                assert.calledOnce(jenkinsClientMock.job.get);
-                assert.calledWith(jenkinsClientMock.job.get, config.buildId);
+                assert.calledOnce(getBuildNumberMock);
+                assert.calledWith(getBuildNumberMock, jobName, jenkinsClientMock);
                 assert.calledOnce(jenkinsClientMock.build.stop);
-                assert.calledWith(jenkinsClientMock.build.stop, config.buildId,
-                    fakeJobInfo.lastBuild.number);
+                assert.calledWith(jenkinsClientMock.build.stop, jobName,
+                    buildNumber);
                 done();
             });
         });
@@ -316,7 +350,7 @@ describe('index', () => {
 
             getCrumbMock.yieldsAsync(error);
             initJenkinsClientMock.yieldsAsync(null);
-            jenkinsClientMock.job.get.yieldsAsync(null);
+            getBuildNumberMock.yieldsAsync(null);
             jenkinsClientMock.build.stop.yieldsAsync(null);
 
             executor.stop(buildIdConfig, (err) => {
@@ -330,7 +364,7 @@ describe('index', () => {
 
             getCrumbMock.yieldsAsync(null, fakeCrumb.body);
             initJenkinsClientMock.yieldsAsync(error);
-            jenkinsClientMock.job.get.yieldsAsync(null);
+            getBuildNumberMock.yieldsAsync(null);
             jenkinsClientMock.build.stop.yieldsAsync(null);
 
             executor.stop(buildIdConfig, (err) => {
@@ -339,12 +373,12 @@ describe('index', () => {
             });
         });
 
-        it('return error when jenkinsClient.job.get is getting error', (done) => {
-            const error = new Error('jenkinsClient.job.get error');
+        it('return error when getBuildNumber is getting error', (done) => {
+            const error = new Error('getBuildNumber error');
 
             getCrumbMock.yieldsAsync(null, fakeCrumb.body);
             initJenkinsClientMock.yieldsAsync(null, jenkinsClientMock);
-            jenkinsClientMock.job.get.yieldsAsync(error);
+            getBuildNumberMock.yieldsAsync(error);
             jenkinsClientMock.build.stop.yieldsAsync(null);
 
             executor.stop(buildIdConfig, (err) => {
@@ -358,7 +392,7 @@ describe('index', () => {
 
             getCrumbMock.yieldsAsync(null, fakeCrumb.body);
             initJenkinsClientMock.yieldsAsync(null, jenkinsClientMock);
-            jenkinsClientMock.job.get.yieldsAsync(null, fakeJobInfo);
+            getBuildNumberMock.yieldsAsync(null, jenkinsClientMock, buildNumber);
             jenkinsClientMock.build.stop.yieldsAsync(error);
 
             executor.stop(buildIdConfig, (err) => {
@@ -372,6 +406,7 @@ describe('index', () => {
         beforeEach(() => {
             getCrumbMock = sinon.stub(executor, 'getCrumb');
             initJenkinsClientMock = sinon.stub(executor, 'initJenkinsClient');
+            getBuildNumberMock = sinon.stub(executor, 'getBuildNumber');
         });
 
         it('return log when the the build is successfully streamed', (done) => {
@@ -379,18 +414,18 @@ describe('index', () => {
 
             getCrumbMock.yieldsAsync(null, fakeCrumb.body);
             initJenkinsClientMock.yieldsAsync(null, jenkinsClientMock);
-            jenkinsClientMock.job.get.yieldsAsync(null, fakeJobInfo);
+            getBuildNumberMock.yieldsAsync(null, jenkinsClientMock, buildNumber);
             jenkinsClientMock.build.log.yieldsAsync(null, log);
 
             executor.stream(buildIdConfig, (err, data) => {
                 assert.isNull(err);
                 assert.calledOnce(getCrumbMock);
                 assert.calledOnce(initJenkinsClientMock);
-                assert.calledOnce(jenkinsClientMock.job.get);
-                assert.calledWith(jenkinsClientMock.job.get, config.buildId);
+                assert.calledOnce(getBuildNumberMock);
+                assert.calledWith(getBuildNumberMock, jobName, jenkinsClientMock);
                 assert.calledOnce(jenkinsClientMock.build.log);
-                assert.calledWith(jenkinsClientMock.build.log, config.buildId,
-                    fakeJobInfo.lastBuild.number);
+                assert.calledWith(jenkinsClientMock.build.log, jobName,
+                    buildNumber);
                 assert.deepEqual(data, log);
                 done();
             });
@@ -401,7 +436,7 @@ describe('index', () => {
 
             getCrumbMock.yieldsAsync(error);
             initJenkinsClientMock.yieldsAsync(null);
-            jenkinsClientMock.job.get.yieldsAsync(null);
+            getBuildNumberMock.yieldsAsync(null);
             jenkinsClientMock.build.log.yieldsAsync(null);
 
             executor.stream(buildIdConfig, (err) => {
@@ -415,7 +450,7 @@ describe('index', () => {
 
             getCrumbMock.yieldsAsync(null, fakeCrumb.body);
             initJenkinsClientMock.yieldsAsync(error);
-            jenkinsClientMock.job.get.yieldsAsync(null);
+            getBuildNumberMock.yieldsAsync(null);
             jenkinsClientMock.build.log.yieldsAsync(null);
 
             executor.stream(buildIdConfig, (err) => {
@@ -424,12 +459,12 @@ describe('index', () => {
             });
         });
 
-        it('return error when jenkinsClientMock.job.get is getting error', (done) => {
-            const error = new Error('jenkinsClientMock.job.get error');
+        it('return error when getBuildNumber is getting error', (done) => {
+            const error = new Error('getBuildNumber error');
 
             getCrumbMock.yieldsAsync(null, fakeCrumb.body);
             initJenkinsClientMock.yieldsAsync(null, jenkinsClientMock);
-            jenkinsClientMock.job.get.yieldsAsync(error);
+            getBuildNumberMock.yieldsAsync(error);
             jenkinsClientMock.build.log.yieldsAsync(null);
 
             executor.stream(buildIdConfig, (err) => {
@@ -443,7 +478,7 @@ describe('index', () => {
 
             getCrumbMock.yieldsAsync(null, fakeCrumb.body);
             initJenkinsClientMock.yieldsAsync(null, jenkinsClientMock);
-            jenkinsClientMock.job.get.yieldsAsync(null);
+            getBuildNumberMock.yieldsAsync(null, jenkinsClientMock, buildNumber);
             jenkinsClientMock.build.log.yieldsAsync(error);
 
             executor.stream(buildIdConfig, (err) => {

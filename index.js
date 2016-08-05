@@ -29,17 +29,17 @@ class J5sExecutor extends Executor {
     /**
      * Get CSRF token crumb for Jenkins
      * @method getCrumb
-     * @param  {Function} callback          Callback with error and crumb object
+     * @param  {Function} callback          fn(err, crumb) where crumb is an object
      */
     getCrumb(callback) {
         const options = {
-            url: this.crumbUrl,
+            uri: this.crumbUrl,
             method: 'GET'
         };
 
         request(options, (error, response) => {
             if (error) {
-                return callback(new Error(error.message));
+                return callback(error);
             }
 
             if (response.statusCode !== 200) {
@@ -57,7 +57,7 @@ class J5sExecutor extends Executor {
      * Initialize the jenkins client with crumb
      * @method initJenkinsClient
      * @param  {Object} crumb               CSRF token from jenkins api
-     * @param  {Function} callback          Callback with error and jenkins client object
+     * @param  {Function} callback          fn(err, jenkinsClient) where jenkinsClient is an object
      */
     initJenkinsClient(crumb, callback) {
         const data = JSON.parse(crumb);
@@ -69,28 +69,28 @@ class J5sExecutor extends Executor {
             }
         });
 
-        if (jenkinsClient) {
-            return callback(null, jenkinsClient);
-        }
-
-        return callback(new Error('Failed to instantiate jenkins client'));
+        return callback(null, jenkinsClient);
     }
 
     /**
      * Get build number of the job's last build
      * @method getBuildNumber
-     * @param  jobName                      name of the jenkins job and also buildID in config
-     * @param  {Function} callback          Callback with error, jenkins client object and build number
+     * @param  {String} jobName             Name of the jenkins job and also buildID in config
+     * @param  {Function} callback          fn(err, jenkinsClient, buidldNumber) where jenkinsClient is an object and buildNumber is number
      */
     getBuildNumber(jobName, jenkinsClient, callback) {
         const get = jenkinsClient.job.get.bind(jenkinsClient.job);
 
         return get(jobName, (err, data) => {
-            try {
-                callback(err, jenkinsClient, data.lastBuild.number);
-            } catch (e) {
-                callback(e);
+            if (err) {
+                return callback(err);
             }
+
+            if (!(data && data.lastBuild && data.lastBuild.number)) {
+                return callback(new Error('No build has been started yet, try later'));
+            }
+
+            return callback(null, jenkinsClient, data.lastBuild.number);
         });
     }
 
@@ -103,13 +103,20 @@ class J5sExecutor extends Executor {
      * @param  {String}   config.pipelineId ID for the pipeline
      * @param  {String}   config.container  Container for the build to run in
      * @param  {String}   config.scmUrl     Scm URL to use in the build
-     * @param  {Function} callback          Callback with null if successful otherwise error
+     * @param  {Function} callback          fn(err)
      */
     _start(config, callback) {
-        const fakeConfigPath = path.resolve(__dirname, './config/test-job.xml');
-        const xml = fs.readFileSync(fakeConfigPath, 'utf-8');
+        let xml;
 
         async.waterfall([
+            (next) => {
+                const configPath = path.resolve(__dirname, './config/test-job.xml');
+
+                fs.readFile(configPath, 'utf-8', (err, fileContents) => {
+                    xml = fileContents;
+                    next(err);
+                });
+            },
             this.getCrumb.bind(this),
             this.initJenkinsClient.bind(this),
             (jenkinsClient, cb) => {
@@ -126,7 +133,7 @@ class J5sExecutor extends Executor {
      * @method stop
      * @param  {Object}   config            A configuration object
      * @param  {String}   config.buildId    ID for the build and also name of the job in jenkins
-     * @param  {Function} callback          Callback with null if successful otherwise error
+     * @param  {Function} callback          fn(err)
      */
     _stop(config, callback) {
         async.waterfall([
@@ -143,7 +150,7 @@ class J5sExecutor extends Executor {
     * @method stream
     * @param  {Object}   config            A configuration object
     * @param  {String}   config.buildId    ID for the build
-    * @param  {Response} callback          Callback with error and data
+    * @param  {Response} callback          fn(err, log) where log is string
     */
     _stream(config, callback) {
         async.waterfall([

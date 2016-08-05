@@ -113,24 +113,12 @@ class J5sExecutor extends Executor {
             this.getCrumb.bind(this),
             this.initJenkinsClient.bind(this),
             (jenkinsClient, cb) => {
-                const create = jenkinsClient.job.create.bind(jenkinsClient.job);
-
-                return create(config.buildId, xml, (err) => {
+                jenkinsClient.job.create(config.buildId, xml, (err) => {
                     cb(err, jenkinsClient);
                 });
             },
-            (jenkinsClient, cb) => {
-                const build = jenkinsClient.job.build.bind(jenkinsClient.job);
-
-                return build(config.buildId, cb);
-            }
-        ], (error) => {
-            if (error) {
-                return callback(new Error(error.message));
-            }
-
-            return callback(null);
-        });
+            (jenkinsClient, cb) => jenkinsClient.job.build(config.buildId, cb)
+        ], callback);
     }
 
     /**
@@ -144,20 +132,10 @@ class J5sExecutor extends Executor {
         async.waterfall([
             this.getCrumb.bind(this),
             this.initJenkinsClient.bind(this),
-            /* eslint-disable arrow-body-style */
             (jenkinsClient, cb) => this.getBuildNumber(config.buildId, jenkinsClient, cb),
-            (jenkinsClient, buildNumber, cb) => {
-                const stop = jenkinsClient.build.stop.bind(jenkinsClient.build);
-
-                return stop(config.buildId, buildNumber, cb);
-            }
-        ], (error) => {
-            if (error) {
-                return callback(new Error(error.message));
-            }
-
-            return callback(null);
-        });
+            (jenkinsClient, buildNumber, cb) =>
+            jenkinsClient.build.stop(config.buildId, buildNumber, cb)
+        ], callback);
     }
 
     /**
@@ -171,20 +149,10 @@ class J5sExecutor extends Executor {
         async.waterfall([
             this.getCrumb.bind(this),
             this.initJenkinsClient.bind(this),
-            /* eslint-disable arrow-body-style */
             (jenkinsClient, cb) => this.getBuildNumber(config.buildId, jenkinsClient, cb),
-            (jenkinsClient, buildNumber, cb) => {
-                const log = jenkinsClient.build.log.bind(jenkinsClient.build);
-
-                log(config.buildId, buildNumber, cb);
-            }
-        ], (error, log) => {
-            if (error) {
-                return callback(new Error(error.message));
-            }
-
-            return callback(null, log);
-        });
+            (jenkinsClient, buildNumber, cb) =>
+            jenkinsClient.build.log(config.buildId, buildNumber, cb)
+        ], callback);
     }
 }
 

@@ -76,6 +76,7 @@ class J5sExecutor extends Executor {
      * Get build number of the job's last build
      * @method getBuildNumber
      * @param  {String} jobName             Name of the jenkins job and also buildID in config
+     * @param  {Object} jenkinsClient       A jenkins client object
      * @param  {Function} callback          fn(err, jenkinsClient, buidldNumber) where jenkinsClient is an object and buildNumber is number
      */
     getBuildNumber(jobName, jenkinsClient, callback) {
@@ -96,7 +97,7 @@ class J5sExecutor extends Executor {
 
     /**
      * Create a jenkins job and start the build
-     * @method _start
+     * @method start
      * @param  {Object}   config            A configuration object
      * @param  {String}   config.buildId    ID for the build and also name of the job in jenkins
      * @param  {String}   config.jobId      ID for the job

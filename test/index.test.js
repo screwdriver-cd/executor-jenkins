@@ -153,16 +153,16 @@ describe('index', () => {
             });
         });
 
-        // it('return error when jenkins() fails to instantiate a jenkins client', (done) => {
-        //     const error = new Error('Failed to instantiate jenkins client');
-        //
-        //     jenkinsMock.returns(null);
-        //
-        //     executor.initJenkinsClient(JSON.stringify(fakeCrumb.body), (err) => {
-        //         assert.deepEqual(err.message, error.message);
-        //         done();
-        //     });
-        // });
+        it('return error when jenkins() fails to instantiate a jenkins client', (done) => {
+            const error = new Error('Failed to instantiate jenkins client');
+
+            jenkinsMock.throws(error);
+
+            executor.initJenkinsClient(JSON.stringify(fakeCrumb.body), (err) => {
+                assert.deepEqual(err.message, error.message);
+                done();
+            });
+        });
     });
 
     describe('getCrumb', () => {

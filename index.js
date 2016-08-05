@@ -61,13 +61,18 @@ class J5sExecutor extends Executor {
      */
     initJenkinsClient(crumb, callback) {
         const data = JSON.parse(crumb);
+        let jenkinsClient;
 
-        const jenkinsClient = jenkins({
-            baseUrl: this.baseUrl,
-            headers: {
-                [data.crumbRequestField]: data.crumb
-            }
-        });
+        try {
+            jenkinsClient = jenkins({
+                baseUrl: this.baseUrl,
+                headers: {
+                    [data.crumbRequestField]: data.crumb
+                }
+            });
+        } catch (err) {
+            return callback(err);
+        }
 
         return callback(null, jenkinsClient);
     }

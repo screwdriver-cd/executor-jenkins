@@ -126,9 +126,11 @@ describe('index', () => {
     });
 
     it('extends base class', () => {
-        assert.isFunction(executor.start);
-        assert.isFunction(executor.stream);
-        assert.isFunction(executor.stop);
+        /* eslint-disable global-require */
+        const BaseExecutor = require('../node_modules/screwdriver-executor-base/index');
+        /* eslint-enable global-require */
+
+        assert.instanceOf(executor, BaseExecutor);
     });
 
     describe('initJenkinsClient', () => {

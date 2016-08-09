@@ -1,6 +1,7 @@
 # Screwdriver Jenkins Executor
+[![Version][npm-image]][npm-url] ![Downloads][downloads-image] [![Build Status][wercker-image]][wercker-url] [![Open Issues][issues-image]][issues-url] [![Dependency Status][daviddm-image]][daviddm-url] ![License][license-image]
 
-This executor plugin extends the [executor-base-class], and provides methods to start jobs from Jenkins
+> This executor plugin extends the [executor-base-class], and provides methods to start jobs from Jenkins
 
 ## Usage
 
@@ -56,5 +57,15 @@ npm test
 
 Code licensed under the BSD 3-Clause license. See LICENSE file for terms.
 
+[npm-image]: https://img.shields.io/npm/v/screwdriver-executor-j5s.svg
+[npm-url]: https://npmjs.org/package/screwdriver-executor-j5s
+[downloads-image]: https://img.shields.io/npm/dt/screwdriver-executor-j5s.svg
+[license-image]: https://img.shields.io/npm/l/screwdriver-executor-j5s.svg
+[issues-image]: https://img.shields.io/github/issues/screwdriver-cd/executor-j5s.svg
+[issues-url]: https://github.com/screwdriver-cd/executor-j5s/issues
+[wercker-image]: https://app.wercker.com/status/395231b72eee6e7d9de5651bd09eb691
+[wercker-url]: https://app.wercker.com/project/bykey/395231b72eee6e7d9de5651bd09eb691
+[daviddm-image]: https://david-dm.org/screwdriver-cd/executor-j5s.svg?theme=shields.io
+[daviddm-url]: https://david-dm.org/screwdriver-cd/executor-j5s
 [executor-base-class]: https://github.com/screwdriver-cd/executor-base
 [screwdriver job-tools]: https://github.com/screwdriver-cd/job-tools

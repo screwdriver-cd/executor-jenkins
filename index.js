@@ -55,10 +55,9 @@ class J5sExecutor extends Executor {
      * @method _start
      * @param  {Object}   config            A configuration object
      * @param  {String}   config.buildId    ID for the build and also name of the job in jenkins
-     * @param  {String}   config.jobId      ID for the job
-     * @param  {String}   config.pipelineId ID for the pipeline
      * @param  {String}   config.container  Container for the build to run in
-     * @param  {String}   config.scmUrl     Scm URL to use in the build
+     * @param  {String}   config.apiUri     Screwdriver's API
+     * @param  {String}   config.token      JWT to act on behalf of the build
      * @param  {Function} callback          fn(err) where data is always null
      */
     _start(config, callback) {

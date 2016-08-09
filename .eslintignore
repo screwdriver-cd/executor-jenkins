@@ -1,0 +1,4 @@
+node_modules/
+artifacts/
+features/*.feature
+demo.js

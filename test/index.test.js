@@ -22,10 +22,9 @@ describe('index', () => {
 
     const config = {
         buildId: '4b8d9b530d2e5e297b4f470d5b0a6e1310d29c5e',
-        jobId: '50dc14f719cdc2c9cb1fb0e49dd2acc4cf6189a0',
-        pipelineId: 'ccc49349d3cffbd12ea9e3d41521480b4aa5de5f',
         container: 'node:4',
-        scmUrl: 'git@github.com:screwdriver-cd/data-model.git#master'
+        apiUri: 'http://localhost:8080',
+        token: 'abcdefg'
     };
 
     const jobName = config.buildId;

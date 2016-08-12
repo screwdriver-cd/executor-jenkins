@@ -30,9 +30,9 @@ class J5sExecutor extends Executor {
      * Constructor
      * @method constructor
      * @param  {Object} options           Configuration options
-     * @param  {Object} options.host      Jenkins hostname to make requests to
-     * @param  {Object} options.username  Jenkins username
-     * @param  {Object} options.password  Jenkins password/token
+     * @param  {String} options.host      Jenkins hostname to make requests to
+     * @param  {String} options.username  Jenkins username
+     * @param  {String} options.password  Jenkins password/token
      */
     constructor(options) {
         super();
@@ -58,7 +58,7 @@ class J5sExecutor extends Executor {
      * @param  {String}   config.container  Container for the build to run in
      * @param  {String}   config.apiUri     Screwdriver's API
      * @param  {String}   config.token      JWT to act on behalf of the build
-     * @param  {Function} callback          fn(err) where data is always null
+     * @param  {Function} callback          fn(err)
      */
     _start(config, callback) {
         const jobName = config.buildId;
@@ -83,6 +83,36 @@ class J5sExecutor extends Executor {
                 action: 'build',
                 params: [jobName]
             }, next)
+        ], callback);
+    }
+
+    /**
+     * Stop the build
+     * @method _stop
+     * @param  {Object}   config            A configuration object
+     * @param  {String}   config.buildId    ID for the build and also name of the job in jenkins
+     * @param  {Function} callback          fn(err)
+     */
+    _stop(config, callback) {
+        const jobName = config.buildId;
+
+        async.waterfall([
+            (next) => this.breaker.runCommand({
+                module: 'job',
+                action: 'get',
+                params: [jobName]
+            }, next),
+            (data, next) => {
+                if (!(data && data.lastBuild && data.lastBuild.number)) {
+                    return next(new Error('No build has been started yet, try later'));
+                }
+
+                return this.breaker.runCommand({
+                    module: 'build',
+                    action: 'stop',
+                    params: [jobName, data.lastBuild.number]
+                }, next);
+            }
         ], callback);
     }
 }

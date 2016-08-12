@@ -44,6 +44,21 @@ The callback is called with:
 * An error `callback(err)` when an error occurs starting the job
 * null `callback(null)` when a job is correctly started
 
+### Stop
+The parameters required are:
+
+| Parameter        | Type  |  Description |
+| :-------------   | :---- | :-------------|
+| config        | Object | Configuration Object |
+| config.buildId | String | The unique ID for a build to be stopped|
+| callback | Function | Callback `fn(err)` for when the build has been stopped |
+
+The `stop` function will stop last build of the job with the `buildId` tag in jenkins.
+
+The callback is called with:
+* An error `callback(err)` when an error occurs stopping the job
+* null `callback(null)` when a job is correctly stopped
+
 ## Testing
 
 ```bash

@@ -1,4 +1,5 @@
 'use strict';
+
 const Executor = require('screwdriver-executor-base');
 const path = require('path');
 const jenkins = require('jenkins');
@@ -73,12 +74,12 @@ class J5sExecutor extends Executor {
                     next(err);
                 });
             },
-            (next) => this.breaker.runCommand({
+            next => this.breaker.runCommand({
                 module: 'job',
                 action: 'create',
                 params: [jobName, xml]
             }, next),
-            (next) => this.breaker.runCommand({
+            next => this.breaker.runCommand({
                 module: 'job',
                 action: 'build',
                 params: [jobName]
@@ -97,7 +98,7 @@ class J5sExecutor extends Executor {
         const jobName = config.buildId;
 
         async.waterfall([
-            (next) => this.breaker.runCommand({
+            next => this.breaker.runCommand({
                 module: 'job',
                 action: 'get',
                 params: [jobName]

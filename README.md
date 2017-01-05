@@ -73,10 +73,10 @@ Code licensed under the BSD 3-Clause license. See LICENSE file for terms.
 [npm-url]: https://npmjs.org/package/screwdriver-executor-j5s
 [downloads-image]: https://img.shields.io/npm/dt/screwdriver-executor-j5s.svg
 [license-image]: https://img.shields.io/npm/l/screwdriver-executor-j5s.svg
-[issues-image]: https://img.shields.io/github/issues/screwdriver-cd/executor-j5s.svg
-[issues-url]: https://github.com/screwdriver-cd/executor-j5s/issues
-[status-image]: https://cd.screwdriver.cd/pipelines/b65e77e258e36b1826390131ccaafcbed5f7acb8/badge
-[status-url]: https://cd.screwdriver.cd/pipelines/b65e77e258e36b1826390131ccaafcbed5f7acb8
+[issues-image]: https://img.shields.io/github/issues/screwdriver-cd/screwdriver.svg
+[issues-url]: https://github.com/screwdriver-cd/screwdriver/issues
+[status-image]: https://cd.screwdriver.cd/pipelines/19/badge
+[status-url]: https://cd.screwdriver.cd/pipelines/19
 [daviddm-image]: https://david-dm.org/screwdriver-cd/executor-j5s.svg?theme=shields.io
 [daviddm-url]: https://david-dm.org/screwdriver-cd/executor-j5s
 [executor-base-class]: https://github.com/screwdriver-cd/executor-base

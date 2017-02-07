@@ -40,9 +40,9 @@
   },
   "dependencies": {
     "async": "^2.0.1",
-    "circuit-fuses": "^1.0.1",
-    "jenkins": "^0.18.0",
+    "circuit-fuses": "^2.2.1",
+    "jenkins": "^0.20.0",
     "request": "^2.72.0",
-    "screwdriver-executor-base": "^3.0.1"
+    "screwdriver-executor-base": "^5.2.2"
   }
 }

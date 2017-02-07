@@ -1,4 +1,6 @@
 # Screwdriver Jenkins Executor
+
+[![Greenkeeper badge](https://badges.greenkeeper.io/screwdriver-cd/executor-j5s.svg)](https://greenkeeper.io/)
 [![Version][npm-image]][npm-url] ![Downloads][downloads-image] [![Build Status][status-image]][status-url] [![Open Issues][issues-image]][issues-url] [![Dependency Status][daviddm-image]][daviddm-url] ![License][license-image]
 
 > This executor plugin extends the [executor-base-class], and provides methods to start jobs from Jenkins

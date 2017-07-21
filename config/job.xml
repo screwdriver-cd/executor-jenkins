@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <description/>
+    <keepDependencies>false</keepDependencies>
+    <properties>
+        <hudson.model.ParametersDefinitionProperty>
+            <parameterDefinitions>
+                <hudson.model.TextParameterDefinition>
+                    <name>SD_BUILD_ID</name>
+                    <description/>
+                    <defaultValue/>
+                </hudson.model.TextParameterDefinition>
+                <hudson.model.TextParameterDefinition>
+                    <name>SD_API</name>
+                    <description/>
+                    <defaultValue/>
+                </hudson.model.TextParameterDefinition>
+                <hudson.model.TextParameterDefinition>
+                    <name>SD_STORE</name>
+                    <description/>
+                    <defaultValue/>
+                </hudson.model.TextParameterDefinition>
+                <hudson.model.PasswordParameterDefinition>
+                    <name>SD_TOKEN</name>
+                    <description/>
+                    <defaultValue/>
+                </hudson.model.PasswordParameterDefinition>
+                <hudson.model.TextParameterDefinition>
+                    <name>SD_CONTAINER</name>
+                    <description/>
+                    <defaultValue/>
+                </hudson.model.TextParameterDefinition>
+            </parameterDefinitions>
+        </hudson.model.ParametersDefinitionProperty>
+    </properties>
+    <scm class="hudson.scm.NullSCM"/>
+    <assignedNode><%= nodeLabel %></assignedNode>
+    <canRoam>false</canRoam>
+    <disabled>false</disabled>
+    <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+    <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+    <triggers/>
+    <concurrentBuild>false</concurrentBuild>
+    <builders>
+        <hudson.tasks.Shell>
+            <command><%= buildScript %></command>
+        </hudson.tasks.Shell>
+    </builders>
+    <publishers>
+        <hudson.plugins.postbuildtask.PostbuildTask plugin="postbuild-task@1.8">
+	        <tasks>
+	            <hudson.plugins.postbuildtask.TaskProperties>
+	                <logTexts>
+	                    <hudson.plugins.postbuildtask.LogProperties>
+		                    <logText>.</logText>
+		                    <operator>AND</operator>
+	                    </hudson.plugins.postbuildtask.LogProperties>
+	                </logTexts>
+	                <EscalateStatus>false</EscalateStatus>
+	                <RunIfJobSuccessful>false</RunIfJobSuccessful>
+	                <script><%= cleanupScript %></script>
+	            </hudson.plugins.postbuildtask.TaskProperties>
+	        </tasks>
+        </hudson.plugins.postbuildtask.PostbuildTask>
+    </publishers>
+    <buildWrappers/>
+</project>

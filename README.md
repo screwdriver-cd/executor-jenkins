@@ -6,7 +6,7 @@
 ## Usage
 
 ```bash
-npm install screwdriver-executor-j5s
+npm install screwdriver-executor-jenkins
 ```
 
 ### Configure
@@ -57,10 +57,10 @@ npm test
 
 Code licensed under the BSD 3-Clause license. See LICENSE file for terms.
 
-[npm-image]: https://img.shields.io/npm/v/screwdriver-executor-j5s.svg
-[npm-url]: https://npmjs.org/package/screwdriver-executor-j5s
-[downloads-image]: https://img.shields.io/npm/dt/screwdriver-executor-j5s.svg
-[license-image]: https://img.shields.io/npm/l/screwdriver-executor-j5s.svg
+[npm-image]: https://img.shields.io/npm/v/screwdriver-executor-jenkins.svg
+[npm-url]: https://npmjs.org/package/screwdriver-executor-jenkins
+[downloads-image]: https://img.shields.io/npm/dt/screwdriver-executor-jenkins.svg
+[license-image]: https://img.shields.io/npm/l/screwdriver-executor-jenkins.svg
 [issues-image]: https://img.shields.io/github/issues/screwdriver-cd/screwdriver.svg
 [issues-url]: https://github.com/screwdriver-cd/screwdriver/issues
 [status-image]: https://cd.screwdriver.cd/pipelines/19/badge

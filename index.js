@@ -10,7 +10,6 @@ const _ = require('lodash');
 const Breaker = require('circuit-fuses');
 
 class J5sExecutor extends Executor {
-
     /**
      * JenkinsClient command to run
      * @method _jenkinsCommand

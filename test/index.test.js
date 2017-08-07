@@ -423,7 +423,7 @@ describe('index', () => {
             executor.start(config).then(() => {
                 assert.calledWith(jenkinsMock.job.create, { name: jobName, xml: compiledJobXml });
                 assert.calledWith(jenkinsMock.job.build,
-                                  { name: jobName, parameters: buildParameters });
+                    { name: jobName, parameters: buildParameters });
                 done();
             });
         });
@@ -436,7 +436,7 @@ describe('index', () => {
 
             // launcher container
             assert.include(compiledJobXml,
-                           xmlescape(shellescape(['--label', `sdbuild=${config.buildId}`])));
+                xmlescape(shellescape(['--label', `sdbuild=${config.buildId}`])));
             assert.include(compiledJobXml, xmlescape('screwdrivercd/launcher:stable'));
         });
 
@@ -464,17 +464,17 @@ describe('index', () => {
 
             // build container
             assert.include(build,
-                           shellescape(['--memory', executorConfig.docker.memory]));
+                shellescape(['--memory', executorConfig.docker.memory]));
             assert.include(build,
-                           shellescape(['--memory-swap', executorConfig.docker.memoryLimit]));
+                shellescape(['--memory-swap', executorConfig.docker.memoryLimit]));
 
             // launcher container
             const label = `sdbuild=${executorConfig.docker.prefix}${config.buildId}`;
 
             assert.include(build,
-                           shellescape(['--label', label]));
+                shellescape(['--label', label]));
             assert.include(build,
-                           `screwdrivercd/launcher:${executorConfig.docker.launchVersion}`);
+                `screwdrivercd/launcher:${executorConfig.docker.launchVersion}`);
         });
     });
 
@@ -513,7 +513,7 @@ describe('index', () => {
             executor.start(config).then(() => {
                 assert.calledWith(jenkinsMock.job.create, { name: jobName, xml: compiledJobXml });
                 assert.calledWith(jenkinsMock.job.build,
-                                  { name: jobName, parameters: buildParameters });
+                    { name: jobName, parameters: buildParameters });
                 done();
             });
         });

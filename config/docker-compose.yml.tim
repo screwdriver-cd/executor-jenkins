@@ -1,0 +1,32 @@
+version: '2'
+services:
+  launcher:
+    image: screwdrivercd/launcher:{{launcher_version}}
+    container_name: {{build_id_with_prefix}}-init
+    labels:
+      sdbuild: {{build_id_with_prefix}}
+    volumes:
+      - /opt/sd
+    entrypoint: /bin/true
+  build:
+    image: {{base_image}}
+    container_name: {{build_id_with_prefix}}-build
+    volumes_from:
+      - launcher:rw
+    labels:
+      sdbuild: {{build_id_with_prefix}}
+    mem_limit: {{memory}}
+    memswap_limit: {{memory_swap}}
+    environment:
+      SD_TOKEN:
+    volumes_from:
+      - launcher:rw
+    entrypoint: /opt/sd/tini
+    command:
+      - "--"
+      - "/bin/sh"
+      - "-c"
+      - |
+          /opt/sd/launch --api-uri {{api_uri}} --emitter /opt/sd/emitter {{build_id}} &
+          /opt/sd/logservice --emitter /opt/sd/emitter --api-uri {{store_uri}} --build {{build_id}} &
+          wait $$(jobs -p)

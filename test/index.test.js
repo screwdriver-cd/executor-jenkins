@@ -3,25 +3,71 @@
 const assert = require('chai').assert;
 const sinon = require('sinon');
 const mockery = require('mockery');
-const fs = require('fs');
-const path = require('path');
-const _ = require('lodash');
+const tinytim = require('tinytim');
 const xmlescape = require('xml-escape');
-const shellescape = require('shell-escape');
 
 sinon.assert.expose(assert, { prefix: '' });
 
-const configPath = path.resolve(__dirname, '../config/job.xml');
-const TEST_XML = fs.readFileSync(configPath, 'utf-8');
+const TEST_JOB_XML = `
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <assignedNode>{{nodeLabel}}</assignedNode>
+    <builders>
+        <hudson.tasks.Shell>
+            <command>{{buildScript}}</command>
+        </hudson.tasks.Shell>
+    </builders>
+    <publishers>
+        <hudson.plugins.postbuildtask.PostbuildTask plugin="postbuild-task@1.8">
+            <script>{{cleanupScript}}</script>
+        </hudson.plugins.postbuildtask.PostbuildTask>
+    </publishers>
+</project>
+`;
+
+const TEST_COMPOSE_YAML = `
+version: '2'
+services:
+  launcher:
+    image: screwdrivercd/launcher:{{launcher_version}}
+    container_name: {{build_id_with_prefix}}-init
+    labels:
+      sdbuild: {{build_id_with_prefix}}
+    volumes:
+      - /opt/sd
+    entrypoint: /bin/true
+  build:
+    image: {{base_image}}
+    container_name: {{build_id_with_prefix}}-build
+    volumes_from:
+      - launcher:rw
+    labels:
+      sdbuild: {{build_id_with_prefix}}
+    mem_limit: {{memory}}
+    memswap_limit: {{memory_swap}}
+    environment:
+      SD_TOKEN:
+    volumes_from:
+      - launcher:rw
+    entrypoint: /opt/sd/tini
+    command:
+      - "--"
+      - "/bin/sh"
+      - "-c"
+      - |
+          /opt/sd/launch --api-uri {{api_uri}} --emitter /opt/sd/emitter {{build_id}} &
+          /opt/sd/logservice --api-uri {{store_uri}} --build {{build_id}} &
+          wait $(jobs -p)
+`;
 
 describe('index', () => {
     let executor;
     let Executor;
-    let fsMock;
     let jenkinsMock;
     let breakerMock;
     let BreakerFactory;
-    let compiledJobXml;
+    let jobXml;
+    let composeYml;
 
     const config = {
         buildId: 1993,
@@ -48,10 +94,6 @@ describe('index', () => {
         SD_STORE: ecosystem.store
     };
 
-    const buildIdConfig = {
-        buildId: config.buildId
-    };
-
     const fakeJobInfo = {
         lastBuild: {
             number: 1
@@ -69,10 +111,6 @@ describe('index', () => {
 
     const buildNumber = fakeJobInfo.lastBuild.number;
 
-    const buildScript = '/opt/bin/sd-build-test-<should-escape-xml>';
-
-    const cleanupScript = '/opt/bin/sd-cleanup-test-<should-escape-xml>';
-
     const cleanupWatchInterval = 0.01;
 
     before(() => {
@@ -83,10 +121,6 @@ describe('index', () => {
     });
 
     beforeEach(() => {
-        fsMock = {
-            readFile: sinon.stub()
-        };
-
         jenkinsMock = {
             job: {
                 create: sinon.stub(),
@@ -102,7 +136,6 @@ describe('index', () => {
 
         BreakerFactory = sinon.stub().returns(breakerMock);
 
-        mockery.registerMock('fs', fsMock);
         mockery.registerMock('circuit-fuses', BreakerFactory);
 
         // eslint-disable-next-line global-require
@@ -116,14 +149,7 @@ describe('index', () => {
                 password: 'fakepassword',
                 nodeLabel
             },
-            buildScript,
-            cleanupScript,
             cleanupWatchInterval
-        });
-        compiledJobXml = _.template(TEST_XML)({
-            nodeLabel: xmlescape(nodeLabel),
-            buildScript: xmlescape(buildScript),
-            cleanupScript: xmlescape(cleanupScript)
         });
     });
 
@@ -143,23 +169,29 @@ describe('index', () => {
         assert.instanceOf(executor, BaseExecutor);
     });
 
+    it('is secure properly', () => {
+        assert.isUndefined(executor.password);
+        assert.isUndefined(executor.baseUrl);
+    });
+
     describe('start', () => {
         let createOpts;
         let configOpts;
         let existsOpts;
         let buildOpts;
+        const fakeXml = 'fake_xml';
 
         beforeEach(() => {
             createOpts = {
                 module: 'job',
                 action: 'create',
-                params: [{ name: jobName, xml: compiledJobXml }]
+                params: [{ name: jobName, xml: fakeXml }]
             };
 
             configOpts = {
                 module: 'job',
                 action: 'config',
-                params: [{ name: jobName, xml: compiledJobXml }]
+                params: [{ name: jobName, xml: fakeXml }]
             };
 
             existsOpts = {
@@ -176,16 +208,14 @@ describe('index', () => {
                     parameters: buildParameters
                 }]
             };
+
+            sinon.stub(executor, '_loadJobXml').returns(fakeXml);
         });
 
         it('return null when the job is successfully created', (done) => {
-            fsMock.readFile.yieldsAsync(null, TEST_XML);
-
             breakerMock.runCommand.withArgs(existsOpts).resolves(false);
 
             executor.start(config).then(() => {
-                assert.calledOnce(fsMock.readFile);
-                assert.calledWith(fsMock.readFile, configPath);
                 assert.calledWith(breakerMock.runCommand, existsOpts);
                 assert.calledWith(breakerMock.runCommand, createOpts);
                 assert.calledWith(breakerMock.runCommand, buildOpts);
@@ -194,13 +224,9 @@ describe('index', () => {
         });
 
         it('update job when job already exists', (done) => {
-            fsMock.readFile.yieldsAsync(null, TEST_XML);
-
             breakerMock.runCommand.withArgs(existsOpts).resolves(true);
 
             executor.start(config).then(() => {
-                assert.calledOnce(fsMock.readFile);
-                assert.calledWith(fsMock.readFile, configPath);
                 assert.calledWith(breakerMock.runCommand, existsOpts);
                 assert.calledWith(breakerMock.runCommand, configOpts);
                 assert.calledWith(breakerMock.runCommand, buildOpts);
@@ -208,21 +234,9 @@ describe('index', () => {
             });
         });
 
-        it('return error when fs.readFile is getting error', (done) => {
-            const error = new Error('fs.readFile error');
-
-            fsMock.readFile.yieldsAsync(error);
-
-            executor.start(config).catch((err) => {
-                assert.deepEqual(err, error);
-                done();
-            });
-        });
-
         it('return error when job.create is getting error', (done) => {
             const error = new Error('job.create error');
 
-            fsMock.readFile.yieldsAsync(null, TEST_XML);
             breakerMock.runCommand.withArgs(createOpts).rejects(error);
 
             executor.start(config).catch((err) => {
@@ -234,7 +248,6 @@ describe('index', () => {
         it('return error when job.build is getting error', (done) => {
             const error = new Error('job.build error');
 
-            fsMock.readFile.yieldsAsync(null, TEST_XML);
             breakerMock.runCommand.withArgs(createOpts).resolves('ok');
             breakerMock.runCommand.withArgs(buildOpts).rejects(error);
 
@@ -247,7 +260,6 @@ describe('index', () => {
         it('return error when job.config is getting error', (done) => {
             const error = new Error('job.build error');
 
-            fsMock.readFile.yieldsAsync(null, TEST_XML);
             breakerMock.runCommand.withArgs(existsOpts).resolves(true);
             breakerMock.runCommand.withArgs(configOpts).rejects(error);
 
@@ -289,7 +301,7 @@ describe('index', () => {
             breakerMock.runCommand.withArgs(stopOpts).resolves(null);
             breakerMock.runCommand.withArgs(destroyOpts).resolves(null);
 
-            executor.stop(buildIdConfig).then((ret) => {
+            executor.stop({ buildId: config.buildId }).then((ret) => {
                 assert.isNull(ret);
                 assert.calledWith(breakerMock.runCommand, getOpts);
                 assert.calledWith(breakerMock.runCommand, stopOpts);
@@ -305,7 +317,7 @@ describe('index', () => {
             breakerMock.runCommand.withArgs(stopOpts).resolves(null);
             breakerMock.runCommand.withArgs(destroyOpts).resolves(null);
 
-            executor.stop(buildIdConfig).then((ret) => {
+            executor.stop({ buildId: config.buildId }).then((ret) => {
                 assert.isNull(ret);
                 assert.calledWith(breakerMock.runCommand, getOpts);
                 assert.calledWith(breakerMock.runCommand, stopOpts);
@@ -322,7 +334,7 @@ describe('index', () => {
             breakerMock.runCommand.withArgs(stopOpts).resolves(null);
             breakerMock.runCommand.withArgs(destroyOpts).resolves(null);
 
-            executor.stop(buildIdConfig).then((ret) => {
+            executor.stop({ buildId: config.buildId }).then((ret) => {
                 assert.isNull(ret);
                 assert.calledWith(breakerMock.runCommand, getOpts);
                 assert.calledWith(breakerMock.runCommand, stopOpts);
@@ -339,7 +351,7 @@ describe('index', () => {
             breakerMock.runCommand.withArgs(getOpts).resolves(noBuildJobInfo);
             breakerMock.runCommand.withArgs(stopOpts).resolves(null);
 
-            executor.stop(buildIdConfig).catch((err) => {
+            executor.stop({ buildId: config.buildId }).catch((err) => {
                 assert.deepEqual(err.message, 'No build has been started yet, try later');
                 done();
             });
@@ -351,7 +363,7 @@ describe('index', () => {
             breakerMock.runCommand.withArgs(getOpts).rejects(error);
             breakerMock.runCommand.withArgs(stopOpts).resolves();
 
-            executor.stop(buildIdConfig).catch((err) => {
+            executor.stop({ buildId: config.buildId }).catch((err) => {
                 assert.deepEqual(err, error);
                 done();
             });
@@ -363,7 +375,7 @@ describe('index', () => {
             breakerMock.runCommand.withArgs(getOpts).resolves(fakeJobInfo);
             breakerMock.runCommand.withArgs(stopOpts).rejects(error);
 
-            executor.stop(buildIdConfig).catch((err) => {
+            executor.stop({ buildId: config.buildId }).catch((err) => {
                 assert.deepEqual(err, error);
                 done();
             });
@@ -376,109 +388,181 @@ describe('index', () => {
             breakerMock.runCommand.withArgs(getOpts).onCall(1).rejects(error);
             breakerMock.runCommand.withArgs(stopOpts).resolves();
 
-            executor.stop(buildIdConfig).catch((err) => {
+            executor.stop({ buildId: config.buildId }).catch((err) => {
                 assert.deepEqual(err, error);
                 done();
             });
         });
     });
 
-    describe('use docker', () => {
+    describe('_loadJobXml', () => {
+        let fsMock;
+
         beforeEach(() => {
-            mockery.deregisterMock('circuit-fuses');
-            mockery.resetCache();
-
-            // eslint-disable-next-line global-require
-            Executor = require('../index');
-
-            executor = new Executor({
-                ecosystem,
-                jenkins: {
-                    host: 'jenkins',
-                    username: 'admin',
-                    password: 'fakepassword'
-                }
-            });
-
-            const taskScript = executor._dockerTaskScript(config);
-
-            compiledJobXml = _.template(TEST_XML)({
-                nodeLabel: 'screwdriver',
-                buildScript: xmlescape(taskScript.buildScript),
-                cleanupScript: xmlescape(taskScript.cleanupScript)
-            });
-
-            jenkinsMock.job.create = sinon.stub(executor.jenkinsClient.job, 'create');
-            jenkinsMock.job.config = sinon.stub(executor.jenkinsClient.job, 'config');
-            jenkinsMock.job.exists = sinon.stub(executor.jenkinsClient.job, 'exists');
-            jenkinsMock.job.build = sinon.stub(executor.jenkinsClient.job, 'build');
-        });
-
-        it('calls jenkins function correctly', (done) => {
-            fsMock.readFile.yieldsAsync(null, compiledJobXml);
-            jenkinsMock.job.exists.yieldsAsync(null, false);
-            jenkinsMock.job.create.yieldsAsync(null);
-            jenkinsMock.job.build.yieldsAsync(null);
-
-            executor.start(config).then(() => {
-                assert.calledWith(jenkinsMock.job.create, { name: jobName, xml: compiledJobXml });
-                assert.calledWith(jenkinsMock.job.build,
-                    { name: jobName, parameters: buildParameters });
-                done();
-            });
-        });
-
-        it('run docker command with default options correctly', () => {
-            // build container
-            assert.include(compiledJobXml, xmlescape(shellescape(['--memory', '4g'])));
-            assert.include(compiledJobXml, xmlescape(shellescape(['--memory-swap', '6g'])));
-            assert.include(compiledJobXml, xmlescape(config.container));
-
-            // launcher container
-            assert.include(compiledJobXml,
-                xmlescape(shellescape(['--label', `sdbuild=${config.buildId}`])));
-            assert.include(compiledJobXml, xmlescape('screwdrivercd/launcher:stable'));
-        });
-
-        it('run docker command with provided options correctly', () => {
-            const executorConfig = {
-                ecosystem,
-                jenkins: {
-                    host: 'jenkins',
-                    username: 'admin',
-                    password: 'fakepassword',
-                    nodeLabel
-                },
-                docker: {
-                    command: '/foo/docker',
-                    memory: '1g',
-                    memoryLimit: '2g',
-                    prefix: 'foo-prefix',
-                    launchVersion: 'foo-ver'
-                }
+            fsMock = {
+                readFileSync: sinon.stub()
             };
 
-            executor = new Executor(executorConfig);
+            mockery.registerMock('fs', fsMock);
 
-            const build = executor._dockerTaskScript(config).buildScript;
+            fsMock.readFileSync.withArgs(sinon.match(/config\/job.xml.tim/))
+                .returns(TEST_JOB_XML);
+        });
 
-            // build container
-            assert.include(build,
-                shellescape(['--memory', executorConfig.docker.memory]));
-            assert.include(build,
-                shellescape(['--memory-swap', executorConfig.docker.memoryLimit]));
+        describe('use custom build script', () => {
+            const buildScript = '/opt/bin/sd-build-test-<should-escape-xml>';
+            const cleanupScript = '/opt/bin/sd-cleanup-test-<should-escape-xml>';
 
-            // launcher container
-            const label = `sdbuild=${executorConfig.docker.prefix}${config.buildId}`;
+            beforeEach(() => {
+                executor = new Executor({
+                    ecosystem,
+                    jenkins: {
+                        host: 'jenkins',
+                        username: 'admin',
+                        password: 'fakepassword',
+                        nodeLabel
+                    },
+                    buildScript,
+                    cleanupScript
+                });
+            });
 
-            assert.include(build,
-                shellescape(['--label', label]));
-            assert.include(build,
-                `screwdrivercd/launcher:${executorConfig.docker.launchVersion}`);
+            it('return jenkins job xml correctly', () => {
+                const xml = tinytim.render(TEST_JOB_XML, {
+                    nodeLabel: xmlescape(nodeLabel),
+                    buildScript: xmlescape(buildScript),
+                    cleanupScript: xmlescape(cleanupScript)
+                });
+
+                assert.equal(executor._loadJobXml(config), xml);
+            });
+        });
+
+        describe('use docker-compose', () => {
+            beforeEach(() => {
+                fsMock.readFileSync.withArgs(sinon.match(/config\/docker-compose.yml.tim/))
+                    .returns(TEST_COMPOSE_YAML);
+            });
+
+            it('use default options correctly', () => {
+                composeYml = tinytim.render(TEST_COMPOSE_YAML, {
+                    launcher_version: 'stable',
+                    build_id: config.buildId,
+                    build_id_with_prefix: `${config.buildId}`,
+                    base_image: config.container,
+                    memory: '4g',
+                    memory_swap: '6g',
+                    api_uri: ecosystem.api,
+                    store_uri: ecosystem.store
+                });
+
+                executor = new Executor({
+                    ecosystem,
+                    jenkins: {
+                        host: 'jenkins',
+                        username: 'admin',
+                        password: 'fakepassword'
+                    }
+                });
+
+                const buildScriptTim = `
+set -eu
+cat << 'EOL' > docker-compose.yml
+{{composeYml}}
+EOL
+
+docker-compose pull
+docker-compose up
+`.trim();
+
+                const cleanupScript = `
+docker-compose rm -f -s
+rm -f docker-compose.yml
+`.trim();
+
+                const buildScript = tinytim.render(buildScriptTim, {
+                    composeYml
+                });
+
+                jobXml = tinytim.render(TEST_JOB_XML, {
+                    nodeLabel: 'screwdriver',
+                    buildScript: xmlescape(buildScript),
+                    cleanupScript: xmlescape(cleanupScript)
+                });
+
+                assert.equal(executor._loadJobXml(config), jobXml);
+            });
+
+            it('use provided options correctly', () => {
+                const composeCommand = 'fake-docker-compose';
+                const prefix = 'foo-prefix';
+                const launchVersion = 'foo-ver';
+                const memory = '20g';
+                const memoryLimit = '25g';
+
+                const executorConfig = {
+                    ecosystem,
+                    jenkins: {
+                        host: 'jenkins',
+                        username: 'admin',
+                        password: 'fakepassword',
+                        nodeLabel
+                    },
+                    docker: {
+                        composeCommand,
+                        memory,
+                        memoryLimit,
+                        prefix,
+                        launchVersion
+                    }
+                };
+
+                executor = new Executor(executorConfig);
+
+                composeYml = tinytim.render(TEST_COMPOSE_YAML, {
+                    launcher_version: launchVersion,
+                    build_id: config.buildId,
+                    build_id_with_prefix: `${prefix}${config.buildId}`,
+                    base_image: config.container,
+                    memory,
+                    memory_swap: memoryLimit,
+                    api_uri: ecosystem.api,
+                    store_uri: ecosystem.store
+                });
+
+                const buildScriptTim = `
+set -eu
+cat << 'EOL' > docker-compose.yml
+{{composeYml}}
+EOL
+
+${composeCommand} pull
+${composeCommand} up
+`.trim();
+
+                const cleanupScript = `
+${composeCommand} rm -f -s
+rm -f docker-compose.yml
+`.trim();
+
+                const buildScript = tinytim.render(buildScriptTim, {
+                    composeYml
+                });
+
+                jobXml = tinytim.render(TEST_JOB_XML, {
+                    nodeLabel,
+                    buildScript: xmlescape(buildScript),
+                    cleanupScript: xmlescape(cleanupScript)
+                });
+
+                assert.equal(executor._loadJobXml(config), jobXml);
+            });
         });
     });
 
     describe('run without Mocked Breaker', () => {
+        const fakeXml = 'fake_xml';
+
         beforeEach(() => {
             mockery.deregisterMock('circuit-fuses');
             mockery.resetCache();
@@ -493,25 +577,24 @@ describe('index', () => {
                     username: 'admin',
                     password: 'fakepassword',
                     nodeLabel
-                },
-                buildScript,
-                cleanupScript
+                }
             });
 
             jenkinsMock.job.create = sinon.stub(executor.jenkinsClient.job, 'create');
             jenkinsMock.job.config = sinon.stub(executor.jenkinsClient.job, 'config');
             jenkinsMock.job.exists = sinon.stub(executor.jenkinsClient.job, 'exists');
             jenkinsMock.job.build = sinon.stub(executor.jenkinsClient.job, 'build');
+
+            sinon.stub(executor, '_loadJobXml').returns(fakeXml);
         });
 
         it('calls jenkins function correctly', (done) => {
-            fsMock.readFile.yieldsAsync(null, TEST_XML);
             jenkinsMock.job.exists.yieldsAsync(null, false);
             jenkinsMock.job.create.yieldsAsync(null);
             jenkinsMock.job.build.yieldsAsync(null);
 
             executor.start(config).then(() => {
-                assert.calledWith(jenkinsMock.job.create, { name: jobName, xml: compiledJobXml });
+                assert.calledWith(jenkinsMock.job.create, { name: jobName, xml: fakeXml });
                 assert.calledWith(jenkinsMock.job.build,
                     { name: jobName, parameters: buildParameters });
                 done();

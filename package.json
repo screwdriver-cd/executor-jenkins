@@ -41,10 +41,10 @@
   "dependencies": {
     "circuit-fuses": "^2.2.1",
     "jenkins": "^0.20.0",
-    "lodash": "^4.17.0",
     "request": "^2.72.0",
     "screwdriver-executor-base": "^5.2.0",
     "shell-escape": "^0.2.0",
+    "tinytim": "^0.1.1",
     "xml-escape": "^1.1.0"
   }
 }

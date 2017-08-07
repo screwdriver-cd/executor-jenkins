@@ -21,7 +21,7 @@ The class provides a couple options that are configurable in the instantiation o
 | config.jenkins.host | String | | The hostname for the Jenkins cluster |
 | config.jenkins.port | Number | 8080 | The port number for the Jenkins cluster |
 | config.jenkins.nodeLabel | String | 'screwdriver' | Node labels of Jenkins slaves |
-| config.docker.command | String | 'docker' | The path to the docker command |
+| config.docker.composeCommand | String | 'docker'-compose | The path to the docker-compose command |
 | config.docker.launchVersion | String | 'stable' | Launcher container version to use |
 | config.docker.prefix | String | '' | Prefix to container names |
 | config.docker.memory | String | '4g' | Memory limit (docker run `--memory` option) |

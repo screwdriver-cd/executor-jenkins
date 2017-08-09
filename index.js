@@ -141,7 +141,7 @@ class J5sExecutor extends Executor {
      * @private
      */
     _taskScript(config) {
-        if (this.buildScript) {
+        if (this.buildScript.length !== 0) {
             return {
                 buildScript: this.buildScript,
                 cleanupScript: this.cleanupScript
@@ -220,7 +220,7 @@ class J5sExecutor extends Executor {
      * @param  {String} [options.docker.prefix='']                     Prefix to all container names
      * @param  {String} [options.docker.memory='4g']                   Memory limit (docker run `--memory` option)
      * @param  {String} [options.docker.memoryLimit='6g']              Memory limit include swap (docker run `--memory-swap` option)
-     * @param  {String} [options.buildScript]                          Shell script to start the job
+     * @param  {String} [options.buildScript='']                       Shell script to start the job
      * @param  {String} [options.cleanupScript='']                     Shell script to clean up the job
      * @param  {Number} [options.cleanupTimeLimit=20]                  Time to destory the job(seconds)
      * @param  {Number} [options.cleanupWatchInterval=2]               Interval to detect the stopped job (seconds)
@@ -240,7 +240,7 @@ class J5sExecutor extends Executor {
         this.memory = (options.docker && options.docker.memory) || '4g';
         this.memoryLimit = (options.docker && options.docker.memoryLimit) || '6g';
 
-        this.buildScript = options.buildScript;
+        this.buildScript = options.buildScript || '';
         this.cleanupScript = options.cleanupScript || '';
         this.cleanupTimeLimit = options.cleanupTimeLimit || 20;
         this.cleanupWatchInterval = options.cleanupWatchInterval || 2;

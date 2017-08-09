@@ -88,7 +88,7 @@ class J5sExecutor extends Executor {
      * Wait until the job has stopped
      * @method _jenkinsJobWaitStop
      * @param  {String}   jobName            Jenkins job name
-     * @param  {Number}   timeConsumed       Elapsed time
+     * @param  {Number}   timeConsumed       Elapsed time (seconds)
      * @return {Promise}
      * @private
      */

@@ -41,7 +41,8 @@ If `config.buildScript` is provided, the executor run the command instead of doc
 
 #### Slave machine
 
-- [docker](https://www.docker.com/)
+- [Docker](https://www.docker.com/)
+- [Docker Compose](https://docs.docker.com/compose/)
 
 ### Methods
 

@@ -326,19 +326,17 @@ describe('index', () => {
             });
         });
 
-        it('return null when the build is successfully stopped after cleanup timeout', (done) => {
-            // change executor's 'internal config
+        it('return error when the job not stopped until the timelimit', (done) => {
             executor.cleanupTimeLimit = 0.05;
 
             breakerMock.runCommand.withArgs(getOpts).resolves(fakeJobInfo);
             breakerMock.runCommand.withArgs(stopOpts).resolves(null);
             breakerMock.runCommand.withArgs(destroyOpts).resolves(null);
 
-            executor.stop({ buildId: config.buildId }).then((ret) => {
-                assert.isNull(ret);
+            executor.stop({ buildId: config.buildId }).catch((err) => {
+                assert.deepEqual(err.message, 'Clean up timeout exceeded');
                 assert.calledWith(breakerMock.runCommand, getOpts);
                 assert.calledWith(breakerMock.runCommand, stopOpts);
-                assert.calledWith(breakerMock.runCommand, destroyOpts);
                 done();
             });
         });

@@ -92,7 +92,7 @@ class J5sExecutor extends Executor {
      */
     _jenkinsJobWaitStop(jobName, timeConsumed) {
         if (timeConsumed >= this.cleanupTimeLimit) {
-            return Promise.resolve();
+            return Promise.reject(new Error('Clean up timeout exceeded'));
         }
 
         return this.breaker.runCommand({

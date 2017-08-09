@@ -36,13 +36,11 @@ class J5sExecutor extends Executor {
      * @private
      */
     _jenkinsJobCreateOrUpdate(jobName, xml) {
-        return Promise.resolve().then(() =>
-            this.breaker.runCommand({
-                module: 'job',
-                action: 'exists',
-                params: [{ name: jobName }]
-            })
-        ).then((exists) => {
+        return this.breaker.runCommand({
+            module: 'job',
+            action: 'exists',
+            params: [{ name: jobName }]
+        }).then((exists) => {
             if (exists) {
                 return this.breaker.runCommand({
                     module: 'job',

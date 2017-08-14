@@ -1,5 +1,5 @@
 {
-  "name": "screwdriver-executor-j5s",
+  "name": "screwdriver-executor-jenkins",
   "version": "2.0.0",
   "description": "Jenkins Executor plugin for Screwdriver",
   "main": "index.js",

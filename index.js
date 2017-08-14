@@ -10,7 +10,7 @@ const Breaker = require('circuit-fuses');
 const password = Symbol('password');
 const baseUrl = Symbol('baseUrl');
 
-class J5sExecutor extends Executor {
+class JenkinsExecutor extends Executor {
     /**
      * JenkinsClient command to run
      * @method _jenkinsCommand
@@ -306,4 +306,4 @@ class J5sExecutor extends Executor {
     }
 }
 
-module.exports = J5sExecutor;
+module.exports = JenkinsExecutor;

@@ -269,21 +269,22 @@ class JenkinsExecutor extends Executor {
         const jobName = this._jobName(config.buildId);
         const xml = this._loadJobXml(config);
 
-        return this._jenkinsJobCreateOrUpdate(jobName, xml).then(() => {
-            const parameters = {
-                SD_BUILD_ID: String(config.buildId),
-                SD_TOKEN: config.token,
-                SD_CONTAINER: config.container,
-                SD_API: this.ecosystem.api,
-                SD_STORE: this.ecosystem.store
-            };
-
-            return this.breaker.runCommand({
+        return this._jenkinsJobCreateOrUpdate(jobName, xml).then(() =>
+            this.breaker.runCommand({
                 module: 'job',
                 action: 'build',
-                params: [{ name: jobName, parameters }]
-            });
-        });
+                params: [{
+                    name: jobName,
+                    parameters: {
+                        SD_BUILD_ID: String(config.buildId),
+                        SD_TOKEN: config.token,
+                        SD_CONTAINER: config.container,
+                        SD_API: this.ecosystem.api,
+                        SD_STORE: this.ecosystem.store
+                    }
+                }]
+            })
+        );
     }
 
     /**

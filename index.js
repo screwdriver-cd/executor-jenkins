@@ -19,6 +19,7 @@ class JenkinsExecutor extends Executor {
      * @param  {String}   options.action     Jenkins client action in the given module. For example: get, create
      * @param  {Array}    options.params     Parameters to run with
      * @param  {Function} callback           fn(err) from jenkinsClient
+     * @private
      */
     _jenkinsCommand(options, callback) {
         // To pass arguments as an array, we need to use apply

@@ -1,3 +1,5 @@
+# Because volumes_from in v3 is not intuitive, using v2.
+# see. https://stackoverflow.com/questions/42232051
 version: '2'
 services:
   launcher:

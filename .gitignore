@@ -4,3 +4,4 @@ npm-debug.log
 .DS_STORE
 .*.swp
 demo.js
+.nyc_output/

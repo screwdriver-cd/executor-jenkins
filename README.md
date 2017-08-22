@@ -1,63 +1,52 @@
 # Screwdriver Jenkins Executor
 [![Version][npm-image]][npm-url] ![Downloads][downloads-image] [![Build Status][status-image]][status-url] [![Open Issues][issues-image]][issues-url] [![Dependency Status][daviddm-image]][daviddm-url] ![License][license-image]
 
-> This executor plugin extends the [executor-base-class], and provides methods to start jobs from Jenkins
+> Jenkins Executor plugin for Screwdriver
 
 ## Usage
 
 ```bash
-npm install screwdriver-executor-j5s
+npm install screwdriver-executor-jenkins
 ```
 
 ### Configure
 The class provides a couple options that are configurable in the instantiation of this Executor
 
-| Parameter        | Type  |  Description |
-| :-------------   | :---- | :-------------|
-| config        | Object | Configuration Object |
-| config.username | String | The username for Jenkins cluster  |
-| config.password | String | The password or token for Jenkins cluster  |
-| config.host | String | The hostname for the Jenkins cluster |
+| Parameter        | Type  | Default    | Description |
+| :-------------   | :---- | :----------| :-----------|
+| config        | Object | | Configuration Object |
+| config.ecosystem | Object | | Screwdriver Ecosystem (ui, api, store, etc.) |
+| config.jenkins.username | String | 'screwdriver' | The username for the Jenkins cluster  |
+| config.jenkins.password | String | | The password or token for the Jenkins cluster  |
+| config.jenkins.host | String | | The hostname for the Jenkins cluster |
+| config.jenkins.port | Number | 8080 | The port number for the Jenkins cluster |
+| config.jenkins.nodeLabel | String | 'screwdriver' | Node labels of Jenkins slaves |
+| config.docker.composeCommand | String | 'docker'-compose | The path to the docker-compose command |
+| config.docker.launchVersion | String | 'stable' | Launcher container version to use |
+| config.docker.prefix | String | '' | Prefix to container names |
+| config.docker.memory | String | '4g' | Memory limit (docker run `--memory` option) |
+| config.docker.memoryLimit | String | '6g' | Memory limit include swap (docker run `--memory-swap` option) |
+| config.buildScript | String | | Shell script to start the job |
+| config.cleanupScript | String | '' | Shell script to clean up the job |
+| config.cleanupTimeLimit | Number | 20 | Time to stop the job (seconds) |
+| config.cleanupWatchInterval | Number | 2 | Interval to detect the stopped job (seconds) |
 
-### Start
-The `start` method takes advantage of the input validation defined in the [executor-base-class].
+If `config.buildScript` is provided, the executor run the command instead of docker. You are responsible for deploying launcher in slave machines or VM.
 
-The parameters required are:
+### Requirements
 
-| Parameter        | Type  |  Description |
-| :-------------   | :---- | :-------------|
-| config        | Object | Configuration Object |
-| config.buildId | String | The unique ID for a build |
-| config.container | String | Container for the build to run in |
-| config.apiUri | String | Screwdriver's API |
-| config.token | String | JWT to act on behalf of the build |
-| callback | Function | Callback `fn(err)` for when job has been created |
+#### Jenkins
 
-The `start` function will start a job in Jenkins with labels for easy lookup. These labels are:
-* sdbuild: config.buildId
+- [Post build task plugin](https://wiki.jenkins.io/display/JENKINS/Post+build+task)
 
-The job runs two containers:
-* Runs the [screwdriver job-tools] container, sharing the files in `/opt/screwdriver`
-* Runs the specified container, which runs `/opt/screwdriver/launch` with the required parameters
+#### Slave machine
 
-The callback is called with:
-* An error `callback(err)` when an error occurs starting the job
-* null `callback(null)` when a job is correctly started
+- [Docker](https://www.docker.com/)
+- [Docker Compose](https://docs.docker.com/compose/)
 
-### Stop
-The parameters required are:
+### Methods
 
-| Parameter        | Type  |  Description |
-| :-------------   | :---- | :-------------|
-| config        | Object | Configuration Object |
-| config.buildId | String | The unique ID for a build to be stopped|
-| callback | Function | Callback `fn(err)` for when the build has been stopped |
-
-The `stop` function will stop last build of the job with the `buildId` tag in jenkins.
-
-The callback is called with:
-* An error `callback(err)` when an error occurs stopping the job
-* null `callback(null)` when a job is correctly stopped
+For more information on `start`, `stop`, and `stats` please see the [executor-base-class].
 
 ## Testing
 
@@ -69,10 +58,10 @@ npm test
 
 Code licensed under the BSD 3-Clause license. See LICENSE file for terms.
 
-[npm-image]: https://img.shields.io/npm/v/screwdriver-executor-j5s.svg
-[npm-url]: https://npmjs.org/package/screwdriver-executor-j5s
-[downloads-image]: https://img.shields.io/npm/dt/screwdriver-executor-j5s.svg
-[license-image]: https://img.shields.io/npm/l/screwdriver-executor-j5s.svg
+[npm-image]: https://img.shields.io/npm/v/screwdriver-executor-jenkins.svg
+[npm-url]: https://npmjs.org/package/screwdriver-executor-jenkins
+[downloads-image]: https://img.shields.io/npm/dt/screwdriver-executor-jenkins.svg
+[license-image]: https://img.shields.io/npm/l/screwdriver-executor-jenkins.svg
 [issues-image]: https://img.shields.io/github/issues/screwdriver-cd/screwdriver.svg
 [issues-url]: https://github.com/screwdriver-cd/screwdriver/issues
 [status-image]: https://cd.screwdriver.cd/pipelines/19/badge

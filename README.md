@@ -1,7 +1,7 @@
 # Screwdriver Jenkins Executor
 [![Version][npm-image]][npm-url] ![Downloads][downloads-image] [![Build Status][status-image]][status-url] [![Open Issues][issues-image]][issues-url] [![Dependency Status][daviddm-image]][daviddm-url] ![License][license-image]
 
-> Jenkins Executor plugin for Screwdriver
+> Jenkins Executor Plugin for Screwdriver
 
 ## Usage
 

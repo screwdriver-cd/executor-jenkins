@@ -10,10 +10,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:screwdriver-cd/executor-j5s.git"
+    "url": "git@github.com:screwdriver-cd/executor-jenkins.git"
   },
-  "homepage": "https://github.com/screwdriver-cd/executor-j5s",
-  "bugs": "https://github.com/screwdriver-cd/executor-j5s/issues",
+  "homepage": "https://github.com/screwdriver-cd/executor-jenkins",
+  "bugs": "https://github.com/screwdriver-cd/executor-jenkins/issues",
   "keywords": [
     "screwdriver",
     "yahoo"

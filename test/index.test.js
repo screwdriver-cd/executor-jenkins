@@ -55,7 +55,8 @@ services:
       - "/bin/sh"
       - "-c"
       - |
-          /opt/sd/launch --api-uri {{api_uri}} --emitter /opt/sd/emitter {{build_id}} &
+          /opt/sd/launch --api-uri {{api_uri}} --store-uri {{store_uri}} \
+          --emitter /opt/sd/emitter {{build_id}} &
           /opt/sd/logservice --api-uri {{store_uri}} --build {{build_id}} &
           wait $(jobs -p)
 `;

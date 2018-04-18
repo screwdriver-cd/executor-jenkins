@@ -30,88 +30,83 @@ class JenkinsExecutor extends Executor {
 
     /**
      * Create or update Jenkins job
-     * @method _jenkinsJobCreateOrUpdate
+     * @async  _jenkinsJobCreateOrUpdate
      * @param  {String}   jobName            Jenkins job name
      * @param  {String}   xml                Jenkins job configuration
      * @return {Promise}
      * @private
      */
-    _jenkinsJobCreateOrUpdate(jobName, xml) {
-        return this.breaker.runCommand({
+    async _jenkinsJobCreateOrUpdate(jobName, xml) {
+        const jobExists = await this.breaker.runCommand({
             module: 'job',
             action: 'exists',
             params: [{ name: jobName }]
-        }).then((exists) => {
-            if (exists) {
-                return this.breaker.runCommand({
-                    module: 'job',
-                    action: 'config',
-                    params: [{ name: jobName, xml }]
-                });
-            }
+        });
+        const action = jobExists ? 'config' : 'create';
 
-            return this.breaker.runCommand({
-                module: 'job',
-                action: 'create',
-                params: [{ name: jobName, xml }]
-            });
+        return this.breaker.runCommand({
+            module: 'job',
+            action,
+            params: [{ name: jobName, xml }]
         });
     }
 
     /**
      * Stop Jenkins job
-     * @method _jenkinsJobStop
+     * @async  _jenkinsJobStop
      * @param  {String}   jobName            Jenkins job name
      * @return {Promise}
      * @private
      */
-    _jenkinsJobStop(jobName) {
-        return this.breaker.runCommand({
+    async _jenkinsJobStop(jobName) {
+        const job = await this.breaker.runCommand({
             module: 'job',
             action: 'get',
             params: [{ name: jobName }]
-        }).then((data) => {
-            if (!(data && data.lastBuild && data.lastBuild.number)) {
-                throw new Error('No build has been started yet, try later');
-            }
+        });
 
-            return this.breaker.runCommand({
-                module: 'build',
-                action: 'stop',
-                params: [{ name: jobName, number: data.lastBuild.number }]
-            });
-        }).then(() => this._jenkinsJobWaitStop(jobName, 0));
+        if (!(job && job.lastBuild && job.lastBuild.number)) {
+            throw new Error('No build has been started yet, try later');
+        }
+
+        await this.breaker.runCommand({
+            module: 'build',
+            action: 'stop',
+            params: [{ name: jobName, number: job.lastBuild.number }]
+        });
+
+        return this._jenkinsJobWaitStop(jobName, 0);
     }
 
     /**
      * Wait until the job has stopped
-     * @method _jenkinsJobWaitStop
+     * @async  _jenkinsJobWaitStop
      * @param  {String}   jobName            Jenkins job name
      * @param  {Number}   timeConsumed       Elapsed time (seconds)
      * @return {Promise}
      * @private
      */
-    _jenkinsJobWaitStop(jobName, timeConsumed) {
+    async _jenkinsJobWaitStop(jobName, timeConsumed) {
         if (timeConsumed >= this.cleanupTimeLimit) {
-            return Promise.reject(new Error('Clean up timeout exceeded'));
+            throw new Error('Clean up timeout exceeded');
         }
 
-        return this.breaker.runCommand({
+        const job = await this.breaker.runCommand({
             module: 'job',
             action: 'get',
             params: [{ name: jobName }]
-        }).then((data) => {
-            if (data && data.lastCompletedBuild && data.lastCompletedBuild.number) {
-                return null;
-            }
-
-            // delay between retry attempts
-            return new Promise((resolve) => {
-                setTimeout(() => resolve(), this.cleanupWatchInterval * 1000);
-            }).then(() =>
-                this._jenkinsJobWaitStop(jobName, timeConsumed + this.cleanupWatchInterval)
-            );
         });
+
+        if (job && job.lastCompletedBuild && job.lastCompletedBuild.number) {
+            return null;
+        }
+
+        // delay between retry attempts
+        return new Promise((resolve) => {
+            setTimeout(resolve, this.cleanupWatchInterval * 1000);
+        }).then(() =>
+            this._jenkinsJobWaitStop(jobName, timeConsumed + this.cleanupWatchInterval)
+        );
     }
 
     /**
@@ -259,52 +254,52 @@ class JenkinsExecutor extends Executor {
 
     /**
      * Create a jenkins job and start the build
-     * @method _start
+     * @async  _start
      * @param  {Object}   config            A configuration object
      * @param  {String}   config.buildId    ID for the build and also name of the job in jenkins
      * @param  {String}   config.container  Container for the build to run in
      * @param  {String}   config.token      JWT to act on behalf of the build
      * @return {Promise}
      */
-    _start(config) {
+    async _start(config) {
         const jobName = this._jobName(config.buildId);
         const xml = this._loadJobXml(config);
 
-        return this._jenkinsJobCreateOrUpdate(jobName, xml).then(() =>
-            this.breaker.runCommand({
-                module: 'job',
-                action: 'build',
-                params: [{
-                    name: jobName,
-                    parameters: {
-                        SD_BUILD_ID: String(config.buildId),
-                        SD_TOKEN: config.token,
-                        SD_CONTAINER: config.container,
-                        SD_API: this.ecosystem.api,
-                        SD_STORE: this.ecosystem.store
-                    }
-                }]
-            })
-        );
+        await this._jenkinsJobCreateOrUpdate(jobName, xml);
+
+        return this.breaker.runCommand({
+            module: 'job',
+            action: 'build',
+            params: [{
+                name: jobName,
+                parameters: {
+                    SD_BUILD_ID: String(config.buildId),
+                    SD_TOKEN: config.token,
+                    SD_CONTAINER: config.container,
+                    SD_API: this.ecosystem.api,
+                    SD_STORE: this.ecosystem.store
+                }
+            }]
+        });
     }
 
     /**
      * Stop the build
-     * @method _stop
+     * @async  _stop
      * @param  {Object}   config            A configuration object
      * @param  {String}   config.buildId    ID for the build
      * @return {Promise}
      */
-    _stop(config) {
+    async _stop(config) {
         const jobName = this._jobName(config.buildId);
 
-        return this._jenkinsJobStop(
-            jobName
-        ).then(() => this.breaker.runCommand({
+        await this._jenkinsJobStop(jobName);
+
+        return this.breaker.runCommand({
             module: 'job',
             action: 'destroy',
             params: [{ name: jobName }]
-        }));
+        });
     }
 }
 

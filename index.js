@@ -301,6 +301,24 @@ class JenkinsExecutor extends Executor {
             params: [{ name: jobName }]
         });
     }
+
+    /**
+     * Starts a new periodic build in an executor
+     * @method _startPeriodic
+     * @return {Promise}  Resolves to null since it's not supported
+     */
+    async _startPeriodic() {
+        return Promise.resolve(null);
+    }
+
+    /**
+     * Stops a new periodic build in an executor
+     * @method _stopPeriodic
+     * @return {Promise}  Resolves to null since it's not supported
+     */
+    async _stopPeriodic() {
+        return Promise.resolve(null);
+    }
 }
 
 module.exports = JenkinsExecutor;

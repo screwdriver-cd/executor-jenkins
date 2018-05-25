@@ -267,20 +267,23 @@ class JenkinsExecutor extends Executor {
 
         await this._jenkinsJobCreateOrUpdate(jobName, xml);
 
-        return this.breaker.runCommand({
-            module: 'job',
-            action: 'build',
-            params: [{
-                name: jobName,
-                parameters: {
-                    SD_BUILD_ID: String(config.buildId),
-                    SD_TOKEN: config.token,
-                    SD_CONTAINER: config.container,
-                    SD_API: this.ecosystem.api,
-                    SD_STORE: this.ecosystem.store
-                }
-            }]
-        });
+        // exchange temporal JWT to build JWT
+        return this.exchangeTokenForBuild(config).then(() =>
+            this.breaker.runCommand({
+                module: 'job',
+                action: 'build',
+                params: [{
+                    name: jobName,
+                    parameters: {
+                        SD_BUILD_ID: String(config.buildId),
+                        SD_TOKEN: config.token,
+                        SD_CONTAINER: config.container,
+                        SD_API: this.ecosystem.api,
+                        SD_STORE: this.ecosystem.store
+                    }
+                }]
+            })
+        );
     }
 
     /**

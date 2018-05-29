@@ -180,6 +180,7 @@ describe('index', () => {
         let configOpts;
         let existsOpts;
         let buildOpts;
+        let exchangeTokenStub;
         const fakeXml = 'fake_xml';
 
         beforeEach(() => {
@@ -211,6 +212,8 @@ describe('index', () => {
             };
 
             sinon.stub(executor, '_loadJobXml').returns(fakeXml);
+            exchangeTokenStub = sinon.stub(executor, 'exchangeTokenForBuild');
+            exchangeTokenStub.resolves();
         });
 
         it('return null when the job is successfully created', (done) => {
@@ -569,6 +572,7 @@ rm -f docker-compose.yml
 
     describe('run without Mocked Breaker', () => {
         const fakeXml = 'fake_xml';
+        let exchangeTokenStub;
 
         beforeEach(() => {
             mockery.deregisterMock('circuit-fuses');
@@ -593,6 +597,8 @@ rm -f docker-compose.yml
             jenkinsMock.job.build = sinon.stub(executor.jenkinsClient.job, 'build');
 
             sinon.stub(executor, '_loadJobXml').returns(fakeXml);
+            exchangeTokenStub = sinon.stub(executor, 'exchangeTokenForBuild');
+            exchangeTokenStub.resolves();
         });
 
         it('calls jenkins function correctly', (done) => {

@@ -268,8 +268,10 @@ class JenkinsExecutor extends Executor {
         await this._jenkinsJobCreateOrUpdate(jobName, xml);
 
         // exchange temporal JWT to build JWT
-        return this.exchangeTokenForBuild(config).then(() =>
-            this.breaker.runCommand({
+        return this.exchangeTokenForBuild(config).then((buildToken) => {
+            config.token = buildToken;
+
+            return this.breaker.runCommand({
                 module: 'job',
                 action: 'build',
                 params: [{
@@ -282,8 +284,8 @@ class JenkinsExecutor extends Executor {
                         SD_STORE: this.ecosystem.store
                     }
                 }]
-            })
-        );
+            });
+        });
     }
 
     /**

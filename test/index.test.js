@@ -89,7 +89,7 @@ describe('index', () => {
 
     const buildParameters = {
         SD_BUILD_ID: String(config.buildId),
-        SD_TOKEN: config.token,
+        SD_TOKEN: 'someBuildToken',
         SD_CONTAINER: config.container,
         SD_API: ecosystem.api,
         SD_STORE: ecosystem.store
@@ -213,7 +213,7 @@ describe('index', () => {
 
             sinon.stub(executor, '_loadJobXml').returns(fakeXml);
             exchangeTokenStub = sinon.stub(executor, 'exchangeTokenForBuild');
-            exchangeTokenStub.resolves();
+            exchangeTokenStub.resolves('someBuildToken');
         });
 
         it('return null when the job is successfully created', (done) => {
@@ -598,7 +598,7 @@ rm -f docker-compose.yml
 
             sinon.stub(executor, '_loadJobXml').returns(fakeXml);
             exchangeTokenStub = sinon.stub(executor, 'exchangeTokenForBuild');
-            exchangeTokenStub.resolves();
+            exchangeTokenStub.resolves('someBuildToken');
         });
 
         it('calls jenkins function correctly', (done) => {

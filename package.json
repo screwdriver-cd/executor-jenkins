@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "circuit-fuses": "^2.2.1",
+    "hoek": "^5.0.3",
     "jenkins": "^0.20.0",
     "request": "^2.72.0",
     "screwdriver-executor-base": "^6.1.0",

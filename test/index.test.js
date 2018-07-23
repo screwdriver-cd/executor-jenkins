@@ -25,6 +25,9 @@ const TEST_JOB_XML = `
 </project>
 `;
 
+const CONFIGURED_BUILD_TIMEOUT = 45;
+const DEFAULT_BUILD_TIMEOUT = 90;
+const MAX_BUILD_TIMEOUT = 120;
 const TEST_COMPOSE_YAML = `
 version: '2'
 services:
@@ -74,7 +77,8 @@ describe('index', () => {
         buildId: 1993,
         container: 'node:4',
         apiUri: 'http://localhost:8080',
-        token: 'abcdefg'
+        token: 'abcdefg',
+        annotations: {}
     };
 
     const jobName = `SD-${config.buildId}`;
@@ -87,12 +91,31 @@ describe('index', () => {
         store: 'store'
     };
 
-    const buildParameters = {
+    const buildParams = {
         SD_BUILD_ID: String(config.buildId),
         SD_TOKEN: 'someBuildToken',
         SD_CONTAINER: config.container,
         SD_API: ecosystem.api,
-        SD_STORE: ecosystem.store
+        SD_STORE: ecosystem.store,
+        SD_BUILD_TIMEOUT: DEFAULT_BUILD_TIMEOUT
+    };
+
+    const maxTimeoutBuildParams = {
+        SD_BUILD_ID: String(config.buildId),
+        SD_TOKEN: 'someBuildToken',
+        SD_CONTAINER: config.container,
+        SD_API: ecosystem.api,
+        SD_STORE: ecosystem.store,
+        SD_BUILD_TIMEOUT: MAX_BUILD_TIMEOUT
+    };
+
+    const configuredTimeoutBuildParams = {
+        SD_BUILD_ID: String(config.buildId),
+        SD_TOKEN: 'someBuildToken',
+        SD_CONTAINER: config.container,
+        SD_API: ecosystem.api,
+        SD_STORE: ecosystem.store,
+        SD_BUILD_TIMEOUT: CONFIGURED_BUILD_TIMEOUT
     };
 
     const fakeJobInfo = {
@@ -180,6 +203,8 @@ describe('index', () => {
         let configOpts;
         let existsOpts;
         let buildOpts;
+        let configuredBuildTimeoutOpts;
+        let maxBuildTimeoutOpts;
         let exchangeTokenStub;
         const fakeXml = 'fake_xml';
 
@@ -207,13 +232,32 @@ describe('index', () => {
                 action: 'build',
                 params: [{
                     name: jobName,
-                    parameters: buildParameters
+                    parameters: buildParams
+                }]
+            };
+
+            configuredBuildTimeoutOpts = {
+                module: 'job',
+                action: 'build',
+                params: [{
+                    name: jobName,
+                    parameters: configuredTimeoutBuildParams
+                }]
+            };
+
+            maxBuildTimeoutOpts = {
+                module: 'job',
+                action: 'build',
+                params: [{
+                    name: jobName,
+                    parameters: maxTimeoutBuildParams
                 }]
             };
 
             sinon.stub(executor, '_loadJobXml').returns(fakeXml);
             exchangeTokenStub = sinon.stub(executor, 'exchangeTokenForBuild');
             exchangeTokenStub.resolves('someBuildToken');
+            config.annotations = {};
         });
 
         it('return null when the job is successfully created', (done) => {
@@ -234,6 +278,30 @@ describe('index', () => {
                 assert.calledWith(breakerMock.runCommand, existsOpts);
                 assert.calledWith(breakerMock.runCommand, configOpts);
                 assert.calledWith(breakerMock.runCommand, buildOpts);
+                done();
+            });
+        });
+
+        it('sets the build timeout if configured by user', (done) => {
+            breakerMock.runCommand.withArgs(existsOpts).resolves(false);
+
+            config.annotations = { 'beta.screwdriver.cd/timeout': CONFIGURED_BUILD_TIMEOUT };
+            executor.start(config).then(() => {
+                assert.calledWith(breakerMock.runCommand, existsOpts);
+                assert.calledWith(breakerMock.runCommand, createOpts);
+                assert.calledWith(breakerMock.runCommand, configuredBuildTimeoutOpts);
+                done();
+            });
+        });
+
+        it('sets the timeout to maxBuildTimeout if user specified a higher timeout', (done) => {
+            breakerMock.runCommand.withArgs(existsOpts).resolves(false);
+
+            config.annotations = { 'beta.screwdriver.cd/timeout': 220 };
+            executor.start(config).then(() => {
+                assert.calledWith(breakerMock.runCommand, existsOpts);
+                assert.calledWith(breakerMock.runCommand, createOpts);
+                assert.calledWith(breakerMock.runCommand, maxBuildTimeoutOpts);
                 done();
             });
         });
@@ -609,7 +677,7 @@ rm -f docker-compose.yml
             executor.start(config).then(() => {
                 assert.calledWith(jenkinsMock.job.create, { name: jobName, xml: fakeXml });
                 assert.calledWith(jenkinsMock.job.build,
-                    { name: jobName, parameters: buildParameters });
+                    { name: jobName, parameters: buildParams });
                 done();
             });
         });

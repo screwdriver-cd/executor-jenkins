@@ -235,7 +235,7 @@ class JenkinsExecutor extends Executor {
         this.username = options.jenkins.username || 'screwdriver';
         this[password] = options.jenkins.password;
         this.nodeLabel = options.jenkins.nodeLabel || 'screwdriver';
-        this.buildTimeout = hoek.reach(options, 'jenkins.buildTimeout') || 90;
+        this.buildTimeout = options.jenkins.buildTimet || 90;
         this.maxBuildTimeout = options.jenkins.maxBuildTimeout || 120;
         this.composeCommand = (options.docker && options.docker.composeCommand) || 'docker-compose';
         this.launchVersion = (options.docker && options.docker.launchVersion) || 'stable';

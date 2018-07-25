@@ -21,7 +21,7 @@ The class provides a couple options that are configurable in the instantiation o
 | config.jenkins.host | String | | The hostname for the Jenkins cluster |
 | config.jenkins.port | Number | 8080 | The port number for the Jenkins cluster |
 | config.jenkins.nodeLabel | String | 'screwdriver' | Node labels of Jenkins slaves |
-| config.jenkins.buildTimeout | Number | 90 | Number of minutes to allow a build to run before considering it is timed out | 
+| config.jenkins.buildTimeout | Number | 90 | Number of minutes to allow a build to run before considering it is timed out |
 | config.jenkins.maxBuildTimeout | Number | 120 | Max timeout user can configure up to |
 | config.docker.composeCommand | String | 'docker'-compose | The path to the docker-compose command |
 | config.docker.launchVersion | String | 'stable' | Launcher container version to use |

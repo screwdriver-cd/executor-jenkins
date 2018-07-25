@@ -101,20 +101,12 @@ describe('index', () => {
     };
 
     const maxTimeoutBuildParams = {
-        SD_BUILD_ID: String(config.buildId),
-        SD_TOKEN: 'someBuildToken',
-        SD_CONTAINER: config.container,
-        SD_API: ecosystem.api,
-        SD_STORE: ecosystem.store,
+        ...buildParams,
         SD_BUILD_TIMEOUT: MAX_BUILD_TIMEOUT
     };
 
     const configuredTimeoutBuildParams = {
-        SD_BUILD_ID: String(config.buildId),
-        SD_TOKEN: 'someBuildToken',
-        SD_CONTAINER: config.container,
-        SD_API: ecosystem.api,
-        SD_STORE: ecosystem.store,
+        ...buildParams,
         SD_BUILD_TIMEOUT: CONFIGURED_BUILD_TIMEOUT
     };
 

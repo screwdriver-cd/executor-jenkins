@@ -6,9 +6,12 @@ const jenkins = require('jenkins');
 const xmlescape = require('xml-escape');
 const tinytim = require('tinytim');
 const Breaker = require('circuit-fuses');
+const hoek = require('hoek');
 
 const password = Symbol('password');
 const baseUrl = Symbol('baseUrl');
+
+const ANNOTATE_BUILD_TIMEOUT = 'beta.screwdriver.cd/timeout';
 
 class JenkinsExecutor extends Executor {
     /**
@@ -211,6 +214,8 @@ class JenkinsExecutor extends Executor {
      * @param  {String} [options.jenkins.username='screwdriver']       Jenkins username
      * @param  {String} options.jenkins.password                       Jenkins password/token
      * @param  {String} [options.jenkins.nodeLabel='screwdriver']      Node labels of Jenkins slaves
+     * @param  {Number} [options.jenkins.buildTimeout=90]              Number of minutes to allow a build to run before considering it is
+     * @param  {Number} [options.jenkins.maxBuildTimeout=120]          Max timeout user can configure up to
      * @param  {String} [options.docker.composeCommand='docker-compose']    THe path to the docker-compose command
      * @param  {String} [options.docker.launchVersion='stable']        Launcher container version to use
      * @param  {String} [options.docker.prefix='']                     Prefix to all container names
@@ -230,6 +235,8 @@ class JenkinsExecutor extends Executor {
         this.username = options.jenkins.username || 'screwdriver';
         this[password] = options.jenkins.password;
         this.nodeLabel = options.jenkins.nodeLabel || 'screwdriver';
+        this.buildTimeout = options.jenkins.buildTimeout || 90;
+        this.maxBuildTimeout = options.jenkins.maxBuildTimeout || 120;
         this.composeCommand = (options.docker && options.docker.composeCommand) || 'docker-compose';
         this.launchVersion = (options.docker && options.docker.launchVersion) || 'stable';
         this.prefix = (options.docker && options.docker.prefix) || '';
@@ -264,6 +271,11 @@ class JenkinsExecutor extends Executor {
     async _start(config) {
         const jobName = this._jobName(config.buildId);
         const xml = this._loadJobXml(config);
+        const annotations = hoek.reach(config, 'annotations', { default: {} });
+
+        const buildTimeout = annotations[ANNOTATE_BUILD_TIMEOUT]
+            ? Math.min(annotations[ANNOTATE_BUILD_TIMEOUT], this.maxBuildTimeout)
+            : this.buildTimeout;
 
         await this._jenkinsJobCreateOrUpdate(jobName, xml);
 
@@ -277,7 +289,8 @@ class JenkinsExecutor extends Executor {
                     SD_TOKEN: config.token,
                     SD_CONTAINER: config.container,
                     SD_API: this.ecosystem.api,
-                    SD_STORE: this.ecosystem.store
+                    SD_STORE: this.ecosystem.store,
+                    SD_BUILD_TIMEOUT: buildTimeout
                 }
             }]
         });

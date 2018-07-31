@@ -30,6 +30,11 @@
                     <description/>
                     <defaultValue/>
                 </hudson.model.TextParameterDefinition>
+                <hudson.model.TextParameterDefinition>
+                    <name>SD_BUILD_TIMEOUT</name>
+                    <description/>
+                    <defaultValue/>
+                </hudson.model.TextParameterDefinition>
             </parameterDefinitions>
         </hudson.model.ParametersDefinitionProperty>
     </properties>

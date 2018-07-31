@@ -195,6 +195,8 @@ describe('index', () => {
         let configOpts;
         let existsOpts;
         let buildOpts;
+        let configuredBuildTimeoutOpts;
+        let maxBuildTimeoutOpts;
         const fakeXml = 'fake_xml';
 
         beforeEach(() => {
@@ -244,6 +246,7 @@ describe('index', () => {
             };
 
             sinon.stub(executor, '_loadJobXml').returns(fakeXml);
+            config.annotations = {};
         });
 
         it('return null when the job is successfully created', (done) => {

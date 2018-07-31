@@ -93,7 +93,7 @@ describe('index', () => {
 
     const buildParams = {
         SD_BUILD_ID: String(config.buildId),
-        SD_TOKEN: 'someBuildToken',
+        SD_TOKEN: config.token,
         SD_CONTAINER: config.container,
         SD_API: ecosystem.api,
         SD_STORE: ecosystem.store,
@@ -197,7 +197,6 @@ describe('index', () => {
         let buildOpts;
         let configuredBuildTimeoutOpts;
         let maxBuildTimeoutOpts;
-        let exchangeTokenStub;
         const fakeXml = 'fake_xml';
 
         beforeEach(() => {
@@ -247,8 +246,6 @@ describe('index', () => {
             };
 
             sinon.stub(executor, '_loadJobXml').returns(fakeXml);
-            exchangeTokenStub = sinon.stub(executor, 'exchangeTokenForBuild');
-            exchangeTokenStub.resolves('someBuildToken');
             config.annotations = {};
         });
 
@@ -632,7 +629,6 @@ rm -f docker-compose.yml
 
     describe('run without Mocked Breaker', () => {
         const fakeXml = 'fake_xml';
-        let exchangeTokenStub;
 
         beforeEach(() => {
             mockery.deregisterMock('circuit-fuses');
@@ -657,8 +653,6 @@ rm -f docker-compose.yml
             jenkinsMock.job.build = sinon.stub(executor.jenkinsClient.job, 'build');
 
             sinon.stub(executor, '_loadJobXml').returns(fakeXml);
-            exchangeTokenStub = sinon.stub(executor, 'exchangeTokenForBuild');
-            exchangeTokenStub.resolves('someBuildToken');
         });
 
         it('calls jenkins function correctly', (done) => {

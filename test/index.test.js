@@ -58,7 +58,8 @@ services:
       - "/bin/sh"
       - "-c"
       - |
-          /opt/sd/run.sh "{{token}}" "{{api_uri}}" "{{store_uri}}" "$SD_BUILD_TIMEOUT" "{{build_id}}"
+          /opt/sd/run.sh "{{token}}" "{{api_uri}}" `
+          + `"{{store_uri}}" "$SD_BUILD_TIMEOUT" "{{build_id}}"
 `;
 
 describe('index', () => {

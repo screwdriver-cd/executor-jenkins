@@ -19,8 +19,6 @@ services:
       sdbuild: {{build_id_with_prefix}}
     mem_limit: {{memory}}
     memswap_limit: {{memory_swap}}
-    environment:
-      SD_TOKEN:
     volumes_from:
       - launcher:rw
     entrypoint: /opt/sd/tini
@@ -29,6 +27,4 @@ services:
       - "/bin/sh"
       - "-c"
       - |
-          /opt/sd/launch --api-uri {{api_uri}} --store-uri {{store_uri}} --emitter /opt/sd/emitter {{build_id}} &
-          /opt/sd/logservice --emitter /opt/sd/emitter --api-uri {{api_uri}} --store-uri {{store_uri}} --build {{build_id}} &
-          wait $$(jobs -p)
+          /opt/sd/run.sh "{{token}}" "{{api_uri}}" "{{store_uri}}" "$SD_BUILD_TIMEOUT" "{{build_id}}"

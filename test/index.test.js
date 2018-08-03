@@ -58,10 +58,8 @@ services:
       - "/bin/sh"
       - "-c"
       - |
-          /opt/sd/launch --api-uri {{api_uri}} --store-uri {{store_uri}} \
-          --emitter /opt/sd/emitter {{build_id}} &
-          /opt/sd/logservice --api-uri {{store_uri}} --build {{build_id}} &
-          wait $(jobs -p)
+          /opt/sd/run.sh "{{token}}" "{{api_uri}}" `
+          + `"{{store_uri}}" "$SD_BUILD_TIMEOUT" "{{build_id}}"
 `;
 
 describe('index', () => {
@@ -516,6 +514,7 @@ describe('index', () => {
                     launcher_version: 'stable',
                     build_id: config.buildId,
                     build_id_with_prefix: `${config.buildId}`,
+                    token: config.token,
                     base_image: config.container,
                     memory: '4g',
                     memory_swap: '6g',
@@ -590,6 +589,7 @@ rm -f docker-compose.yml
                     launcher_version: launchVersion,
                     build_id: config.buildId,
                     build_id_with_prefix: `${prefix}${config.buildId}`,
+                    token: config.token,
                     base_image: config.container,
                     memory,
                     memory_swap: memoryLimit,

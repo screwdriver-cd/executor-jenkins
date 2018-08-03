@@ -162,6 +162,7 @@ class JenkinsExecutor extends Executor {
             launcher_version: this.launchVersion,
             build_id: config.buildId,
             build_id_with_prefix: `${this.prefix}${config.buildId}`,
+            token: config.token,
             base_image: config.container,
             memory: this.memory,
             memory_swap: this.memoryLimit,

@@ -11,7 +11,7 @@ const hoek = require('hoek');
 const password = Symbol('password');
 const baseUrl = Symbol('baseUrl');
 
-const ANNOTATE_BUILD_TIMEOUT = 'beta.screwdriver.cd/timeout';
+const ANNOTATE_BUILD_TIMEOUT = 'timeout';
 
 class JenkinsExecutor extends Executor {
     /**
@@ -272,7 +272,8 @@ class JenkinsExecutor extends Executor {
     async _start(config) {
         const jobName = this._jobName(config.buildId);
         const xml = this._loadJobXml(config);
-        const annotations = hoek.reach(config, 'annotations', { default: {} });
+        const annotations = this.parseAnnotations(
+            hoek.reach(config, 'annotations', { default: {} }));
 
         const buildTimeout = annotations[ANNOTATE_BUILD_TIMEOUT]
             ? Math.min(annotations[ANNOTATE_BUILD_TIMEOUT], this.maxBuildTimeout)

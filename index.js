@@ -28,7 +28,8 @@ class JenkinsExecutor extends Executor {
         // To pass arguments as an array, we need to use apply
         this.jenkinsClient[options.module][options.action].apply(
             this.jenkinsClient[options.module],
-            options.params.concat([callback]));
+            options.params.concat([callback])
+        );
     }
 
     /**
@@ -107,9 +108,7 @@ class JenkinsExecutor extends Executor {
         // delay between retry attempts
         return new Promise((resolve) => {
             setTimeout(resolve, this.cleanupWatchInterval * 1000);
-        }).then(() =>
-            this._jenkinsJobWaitStop(jobName, timeConsumed + this.cleanupWatchInterval)
-        );
+        }).then(() => this._jenkinsJobWaitStop(jobName, timeConsumed + this.cleanupWatchInterval));
     }
 
     /**
@@ -273,7 +272,8 @@ class JenkinsExecutor extends Executor {
         const jobName = this._jobName(config.buildId);
         const xml = this._loadJobXml(config);
         const annotations = this.parseAnnotations(
-            hoek.reach(config, 'annotations', { default: {} }));
+            hoek.reach(config, 'annotations', { default: {} })
+        );
 
         const buildTimeout = annotations[ANNOTATE_BUILD_TIMEOUT]
             ? Math.min(annotations[ANNOTATE_BUILD_TIMEOUT], this.maxBuildTimeout)

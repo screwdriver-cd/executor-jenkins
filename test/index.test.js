@@ -59,7 +59,7 @@ services:
       - "-c"
       - |
           /opt/sd/run.sh "{{token}}" "{{api_uri}}" `
-          + `"{{store_uri}}" "$SD_BUILD_TIMEOUT" "{{build_id}}"
+          + `"{{store_uri}}" "$SD_BUILD_TIMEOUT" "{{build_id}}" "{{ui_uri}}"
 `;
 
 describe('index', () => {
@@ -95,6 +95,7 @@ describe('index', () => {
         SD_CONTAINER: config.container,
         SD_API: ecosystem.api,
         SD_STORE: ecosystem.store,
+        SD_UI: ecosystem.ui,
         SD_BUILD_TIMEOUT: DEFAULT_BUILD_TIMEOUT
     };
 
@@ -519,7 +520,8 @@ describe('index', () => {
                     memory: '4g',
                     memory_swap: '6g',
                     api_uri: ecosystem.api,
-                    store_uri: ecosystem.store
+                    store_uri: ecosystem.store,
+                    ui_uri: ecosystem.ui
                 });
 
                 executor = new Executor({
@@ -594,7 +596,8 @@ rm -f docker-compose.yml
                     memory,
                     memory_swap: memoryLimit,
                     api_uri: ecosystem.api,
-                    store_uri: ecosystem.store
+                    store_uri: ecosystem.store,
+                    ui_uri: ecosystem.ui
                 });
 
                 const buildScriptTim = `

@@ -166,7 +166,8 @@ class JenkinsExecutor extends Executor {
             memory: this.memory,
             memory_swap: this.memoryLimit,
             api_uri: this.ecosystem.api,
-            store_uri: this.ecosystem.store
+            store_uri: this.ecosystem.store,
+            ui_uri: this.ecosystem.ui
         };
 
         const templateFile = path.resolve(__dirname, './config/docker-compose.yml.tim');
@@ -209,6 +210,7 @@ class JenkinsExecutor extends Executor {
      * @param  {Object} options.ecosystem                              Screwdriver Ecosystem
      * @param  {Object} options.ecosystem.api                          Routable URI to Screwdriver API
      * @param  {Object} options.ecosystem.store                        Routable URI to Screwdriver Store
+     * @param  {Object} options.ecosystem.ui                           Routable URI to Screwdriver UI
      * @param  {String} options.jenkins.host                           Jenkins hostname to make requests to
      * @param  {Number} [options.jenkins.port=8080]                    Jenkins port to make requests to
      * @param  {String} [options.jenkins.username='screwdriver']       Jenkins username
@@ -292,6 +294,7 @@ class JenkinsExecutor extends Executor {
                     SD_CONTAINER: config.container,
                     SD_API: this.ecosystem.api,
                     SD_STORE: this.ecosystem.store,
+                    SD_UI: this.ecosystem.ui,
                     SD_BUILD_TIMEOUT: buildTimeout
                 }
             }]

@@ -20,6 +20,11 @@
                     <description/>
                     <defaultValue/>
                 </hudson.model.TextParameterDefinition>
+                <hudson.model.TextParameterDefinition>
+                    <name>SD_UI</name>
+                    <description/>
+                    <defaultValue/>
+                </hudson.model.TextParameterDefinition>
                 <hudson.model.PasswordParameterDefinition>
                     <name>SD_TOKEN</name>
                     <description/>

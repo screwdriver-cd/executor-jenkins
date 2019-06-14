@@ -500,7 +500,9 @@ describe('index', () => {
                     cleanupScript: xmlescape(cleanupScript)
                 });
 
-                assert.equal(executor._loadJobXml(config), xml);
+                const parsedAnnotations = {};
+
+                assert.equal(executor._loadJobXml(config, parsedAnnotations), xml);
             });
         });
 
@@ -558,7 +560,9 @@ rm -f docker-compose.yml
                     cleanupScript: xmlescape(cleanupScript)
                 });
 
-                assert.equal(executor._loadJobXml(config), jobXml);
+                const parsedAnnotations = {};
+
+                assert.equal(executor._loadJobXml(config, parsedAnnotations), jobXml);
             });
 
             it('use provided options correctly', () => {
@@ -573,8 +577,7 @@ rm -f docker-compose.yml
                     jenkins: {
                         host: 'jenkins',
                         username: 'admin',
-                        password: 'fakepassword',
-                        nodeLabel
+                        password: 'fakepassword'
                     },
                     docker: {
                         composeCommand,
@@ -619,13 +622,16 @@ rm -f docker-compose.yml
                     composeYml
                 });
 
+                const providedNodeLabel = 'foo-label';
+                const parsedAnnotations = { nodeLabel: providedNodeLabel };
+
                 jobXml = tinytim.render(TEST_JOB_XML, {
-                    nodeLabel,
+                    nodeLabel: `screwdriver-${providedNodeLabel}`,
                     buildScript: xmlescape(buildScript),
                     cleanupScript: xmlescape(cleanupScript)
                 });
 
-                assert.equal(executor._loadJobXml(config), jobXml);
+                assert.equal(executor._loadJobXml(config, parsedAnnotations), jobXml);
             });
         });
     });

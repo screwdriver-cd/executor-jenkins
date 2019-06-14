@@ -12,6 +12,7 @@ const password = Symbol('password');
 const baseUrl = Symbol('baseUrl');
 
 const ANNOTATE_BUILD_TIMEOUT = 'timeout';
+const ANNOTATE_BUILD_NODE_LABEL = 'nodeLabel';
 
 class JenkinsExecutor extends Executor {
     /**
@@ -115,14 +116,17 @@ class JenkinsExecutor extends Executor {
      * Jenkins job config xml
      * @method _loadJobXml
      * @param  {Object}   config        A configuration object psssed to _start
+     * @param  {Object}   annotations   Annotations passed to _start
      * @return {String}
      * @private
      */
-    _loadJobXml(config) {
+    _loadJobXml(config, annotations) {
         const { buildScript, cleanupScript } = this._taskScript(config);
+        const nodeLabel = annotations[ANNOTATE_BUILD_NODE_LABEL]
+            ? `${this.nodeLabel}-${annotations[ANNOTATE_BUILD_NODE_LABEL]}` : this.nodeLabel;
 
         const variables = {
-            nodeLabel: xmlescape(this.nodeLabel),
+            nodeLabel: xmlescape(nodeLabel),
             buildScript: xmlescape(buildScript),
             cleanupScript: xmlescape(cleanupScript)
         };
@@ -272,11 +276,11 @@ class JenkinsExecutor extends Executor {
      */
     async _start(config) {
         const jobName = this._jobName(config.buildId);
-        const xml = this._loadJobXml(config);
         const annotations = this.parseAnnotations(
             hoek.reach(config, 'annotations', { default: {} })
         );
 
+        const xml = this._loadJobXml(config, annotations);
         const buildTimeout = annotations[ANNOTATE_BUILD_TIMEOUT]
             ? Math.min(annotations[ANNOTATE_BUILD_TIMEOUT], this.maxBuildTimeout)
             : this.buildTimeout;

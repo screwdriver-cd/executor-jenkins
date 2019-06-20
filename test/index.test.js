@@ -500,7 +500,9 @@ describe('index', () => {
                     cleanupScript: xmlescape(cleanupScript)
                 });
 
-                assert.equal(executor._loadJobXml(config), xml);
+                const parsedAnnotations = {};
+
+                assert.equal(executor._loadJobXml(config, parsedAnnotations), xml);
             });
         });
 
@@ -558,10 +560,12 @@ rm -f docker-compose.yml
                     cleanupScript: xmlescape(cleanupScript)
                 });
 
-                assert.equal(executor._loadJobXml(config), jobXml);
+                const parsedAnnotations = {};
+
+                assert.equal(executor._loadJobXml(config, parsedAnnotations), jobXml);
             });
 
-            it('use provided options correctly', () => {
+            it('use provided options correctly without nodeLabel', () => {
                 const composeCommand = 'fake-docker-compose';
                 const prefix = 'foo-prefix';
                 const launchVersion = 'foo-ver';
@@ -625,7 +629,78 @@ rm -f docker-compose.yml
                     cleanupScript: xmlescape(cleanupScript)
                 });
 
-                assert.equal(executor._loadJobXml(config), jobXml);
+                const parsedAnnotations = {};
+
+                assert.equal(executor._loadJobXml(config, parsedAnnotations), jobXml);
+            });
+
+            it('use provided options correctly with nodeLabel', () => {
+                const composeCommand = 'fake-docker-compose';
+                const prefix = 'foo-prefix';
+                const launchVersion = 'foo-ver';
+                const memory = '20g';
+                const memoryLimit = '25g';
+
+                const executorConfig = {
+                    ecosystem,
+                    jenkins: {
+                        host: 'jenkins',
+                        username: 'admin',
+                        password: 'fakepassword'
+                    },
+                    docker: {
+                        composeCommand,
+                        memory,
+                        memoryLimit,
+                        prefix,
+                        launchVersion
+                    }
+                };
+
+                executor = new Executor(executorConfig);
+
+                composeYml = tinytim.render(TEST_COMPOSE_YAML, {
+                    launcher_version: launchVersion,
+                    build_id: config.buildId,
+                    build_id_with_prefix: `${prefix}${config.buildId}`,
+                    token: config.token,
+                    base_image: config.container,
+                    memory,
+                    memory_swap: memoryLimit,
+                    api_uri: ecosystem.api,
+                    store_uri: ecosystem.store,
+                    ui_uri: ecosystem.ui
+                });
+
+                const buildScriptTim = `
+set -eu
+cat << 'EOL' > docker-compose.yml
+{{composeYml}}
+EOL
+
+${composeCommand} pull
+${composeCommand} up
+`.trim();
+
+                const cleanupScript = `
+${composeCommand} rm -f -s
+rm -f docker-compose.yml
+`.trim();
+
+                const buildScript = tinytim.render(buildScriptTim, {
+                    composeYml
+                });
+
+                const providedNodeLabel = 'foo-label';
+                const parsedAnnotations = { nodeLabel: providedNodeLabel };
+
+                jobXml = tinytim.render(TEST_JOB_XML, {
+                    nodeLabel: `screwdriver-${providedNodeLabel}`,
+                    buildScript: xmlescape(buildScript),
+                    cleanupScript: xmlescape(cleanupScript)
+                });
+
+                assert.equal(executor._loadJobXml(config, parsedAnnotations), jobXml);
             });
         });
     });

@@ -45,7 +45,7 @@
     "hoek": "^5.0.4",
     "jenkins": "^0.20.0",
     "request": "^2.88.0",
-    "screwdriver-executor-base": "^6.1.0",
+    "screwdriver-executor-base": "^7.2.0",
     "tinytim": "^0.1.1",
     "xml-escape": "^1.1.0"
   },

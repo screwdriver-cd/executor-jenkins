@@ -41,7 +41,7 @@
     "sinon": "^7.1.0"
   },
   "dependencies": {
-    "circuit-fuses": "^2.2.1",
+    "circuit-fuses": "^4.0.4",
     "hoek": "^5.0.4",
     "jenkins": "^0.20.0",
     "request": "^2.88.0",

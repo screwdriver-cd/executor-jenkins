@@ -151,7 +151,7 @@ describe('index', () => {
 
         BreakerFactory = sinon.stub().returns(breakerMock);
 
-        mockery.registerMock('circuit-fuses', BreakerFactory);
+        mockery.registerMock('circuit-fuses', { breaker: BreakerFactory });
 
         // eslint-disable-next-line global-require
         Executor = require('../index');

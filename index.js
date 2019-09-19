@@ -5,7 +5,7 @@ const path = require('path');
 const jenkins = require('jenkins');
 const xmlescape = require('xml-escape');
 const tinytim = require('tinytim');
-const Breaker = require('circuit-fuses');
+const Breaker = require('circuit-fuses').breaker;
 const hoek = require('hoek');
 
 const password = Symbol('password');

@@ -28,7 +28,8 @@ const TEST_JOB_XML = `
 const CONFIGURED_BUILD_TIMEOUT = 45;
 const DEFAULT_BUILD_TIMEOUT = 90;
 const MAX_BUILD_TIMEOUT = 120;
-const TEST_COMPOSE_YAML = `
+const TEST_COMPOSE_YAML =
+    `
 version: '2'
 services:
   launcher:
@@ -58,8 +59,8 @@ services:
       - "/bin/sh"
       - "-c"
       - |
-          /opt/sd/run.sh "{{token}}" "{{api_uri}}" `
-          + `"{{store_uri}}" "$SD_BUILD_TIMEOUT" "{{build_id}}" "{{ui_uri}}"
+          /opt/sd/run.sh "{{token}}" "{{api_uri}}" ` +
+    `"{{store_uri}}" "$SD_BUILD_TIMEOUT" "{{build_id}}" "{{ui_uri}}"
 `;
 
 describe('index', () => {
@@ -220,35 +221,41 @@ describe('index', () => {
             buildOpts = {
                 module: 'job',
                 action: 'build',
-                params: [{
-                    name: jobName,
-                    parameters: buildParams
-                }]
+                params: [
+                    {
+                        name: jobName,
+                        parameters: buildParams
+                    }
+                ]
             };
 
             configuredBuildTimeoutOpts = {
                 module: 'job',
                 action: 'build',
-                params: [{
-                    name: jobName,
-                    parameters: configuredTimeoutBuildParams
-                }]
+                params: [
+                    {
+                        name: jobName,
+                        parameters: configuredTimeoutBuildParams
+                    }
+                ]
             };
 
             maxBuildTimeoutOpts = {
                 module: 'job',
                 action: 'build',
-                params: [{
-                    name: jobName,
-                    parameters: maxTimeoutBuildParams
-                }]
+                params: [
+                    {
+                        name: jobName,
+                        parameters: maxTimeoutBuildParams
+                    }
+                ]
             };
 
             sinon.stub(executor, '_loadJobXml').returns(fakeXml);
             config.annotations = {};
         });
 
-        it('return null when the job is successfully created', (done) => {
+        it('return null when the job is successfully created', done => {
             breakerMock.runCommand.withArgs(existsOpts).resolves(false);
 
             executor.start(config).then(() => {
@@ -259,7 +266,7 @@ describe('index', () => {
             });
         });
 
-        it('update job when job already exists', (done) => {
+        it('update job when job already exists', done => {
             breakerMock.runCommand.withArgs(existsOpts).resolves(true);
 
             executor.start(config).then(() => {
@@ -270,19 +277,24 @@ describe('index', () => {
             });
         });
 
-        it('sets the build timeout if configured by user', (done) => {
+        it('sets the build timeout if configured by user', done => {
             breakerMock.runCommand.withArgs(existsOpts).resolves(false);
 
-            config.annotations = { 'beta.screwdriver.cd/timeout': CONFIGURED_BUILD_TIMEOUT };
+            config.annotations = {
+                'beta.screwdriver.cd/timeout': CONFIGURED_BUILD_TIMEOUT
+            };
             executor.start(config).then(() => {
                 assert.calledWith(breakerMock.runCommand, existsOpts);
                 assert.calledWith(breakerMock.runCommand, createOpts);
-                assert.calledWith(breakerMock.runCommand, configuredBuildTimeoutOpts);
+                assert.calledWith(
+                    breakerMock.runCommand,
+                    configuredBuildTimeoutOpts
+                );
                 done();
             });
         });
 
-        it('sets the timeout to maxBuildTimeout if user specified a higher timeout', (done) => {
+        it('sets the timeout to maxBuildTimeout if user specified a higher timeout', done => {
             breakerMock.runCommand.withArgs(existsOpts).resolves(false);
 
             config.annotations = { 'beta.screwdriver.cd/timeout': 220 };
@@ -294,36 +306,36 @@ describe('index', () => {
             });
         });
 
-        it('return error when job.create is getting error', (done) => {
+        it('return error when job.create is getting error', done => {
             const error = new Error('job.create error');
 
             breakerMock.runCommand.withArgs(createOpts).rejects(error);
 
-            executor.start(config).catch((err) => {
+            executor.start(config).catch(err => {
                 assert.deepEqual(err, error);
                 done();
             });
         });
 
-        it('return error when job.build is getting error', (done) => {
+        it('return error when job.build is getting error', done => {
             const error = new Error('job.build error');
 
             breakerMock.runCommand.withArgs(createOpts).resolves('ok');
             breakerMock.runCommand.withArgs(buildOpts).rejects(error);
 
-            executor.start(config).catch((err) => {
+            executor.start(config).catch(err => {
                 assert.deepEqual(err, error);
                 done();
             });
         });
 
-        it('return error when job.config is getting error', (done) => {
+        it('return error when job.config is getting error', done => {
             const error = new Error('job.build error');
 
             breakerMock.runCommand.withArgs(existsOpts).resolves(true);
             breakerMock.runCommand.withArgs(configOpts).rejects(error);
 
-            executor.start(config).catch((err) => {
+            executor.start(config).catch(err => {
                 assert.deepEqual(err, error);
                 done();
             });
@@ -355,13 +367,19 @@ describe('index', () => {
             };
         });
 
-        it('return null when the build is successfully stopped', (done) => {
-            breakerMock.runCommand.withArgs(getOpts).onCall(0).resolves(fakeJobInfo);
-            breakerMock.runCommand.withArgs(getOpts).onCall(1).resolves(fakeCompletedJobInfo);
+        it('return null when the build is successfully stopped', done => {
+            breakerMock.runCommand
+                .withArgs(getOpts)
+                .onCall(0)
+                .resolves(fakeJobInfo);
+            breakerMock.runCommand
+                .withArgs(getOpts)
+                .onCall(1)
+                .resolves(fakeCompletedJobInfo);
             breakerMock.runCommand.withArgs(stopOpts).resolves(null);
             breakerMock.runCommand.withArgs(destroyOpts).resolves(null);
 
-            executor.stop({ buildId: config.buildId }).then((ret) => {
+            executor.stop({ buildId: config.buildId }).then(ret => {
                 assert.isNull(ret);
                 assert.calledWith(breakerMock.runCommand, getOpts);
                 assert.calledWith(breakerMock.runCommand, stopOpts);
@@ -370,14 +388,23 @@ describe('index', () => {
             });
         });
 
-        it('return null when the build is successfully stopped after a while', (done) => {
-            breakerMock.runCommand.withArgs(getOpts).onCall(0).resolves(fakeJobInfo);
-            breakerMock.runCommand.withArgs(getOpts).onCall(1).resolves(fakeJobInfo);
-            breakerMock.runCommand.withArgs(getOpts).onCall(2).resolves(fakeCompletedJobInfo);
+        it('return null when the build is successfully stopped after a while', done => {
+            breakerMock.runCommand
+                .withArgs(getOpts)
+                .onCall(0)
+                .resolves(fakeJobInfo);
+            breakerMock.runCommand
+                .withArgs(getOpts)
+                .onCall(1)
+                .resolves(fakeJobInfo);
+            breakerMock.runCommand
+                .withArgs(getOpts)
+                .onCall(2)
+                .resolves(fakeCompletedJobInfo);
             breakerMock.runCommand.withArgs(stopOpts).resolves(null);
             breakerMock.runCommand.withArgs(destroyOpts).resolves(null);
 
-            executor.stop({ buildId: config.buildId }).then((ret) => {
+            executor.stop({ buildId: config.buildId }).then(ret => {
                 assert.isNull(ret);
                 assert.calledWith(breakerMock.runCommand, getOpts);
                 assert.calledWith(breakerMock.runCommand, stopOpts);
@@ -386,14 +413,14 @@ describe('index', () => {
             });
         });
 
-        it('return error when the job not stopped until the timelimit', (done) => {
+        it('return error when the job not stopped until the timelimit', done => {
             executor.cleanupTimeLimit = 0.05;
 
             breakerMock.runCommand.withArgs(getOpts).resolves(fakeJobInfo);
             breakerMock.runCommand.withArgs(stopOpts).resolves(null);
             breakerMock.runCommand.withArgs(destroyOpts).resolves(null);
 
-            executor.stop({ buildId: config.buildId }).catch((err) => {
+            executor.stop({ buildId: config.buildId }).catch(err => {
                 assert.deepEqual(err.message, 'Clean up timeout exceeded');
                 assert.calledWith(breakerMock.runCommand, getOpts);
                 assert.calledWith(breakerMock.runCommand, stopOpts);
@@ -401,7 +428,7 @@ describe('index', () => {
             });
         });
 
-        it('return error when there is no build to be stopped yet', (done) => {
+        it('return error when there is no build to be stopped yet', done => {
             const noBuildJobInfo = {
                 lastBuild: null
             };
@@ -409,44 +436,53 @@ describe('index', () => {
             breakerMock.runCommand.withArgs(getOpts).resolves(noBuildJobInfo);
             breakerMock.runCommand.withArgs(stopOpts).resolves(null);
 
-            executor.stop({ buildId: config.buildId }).catch((err) => {
-                assert.deepEqual(err.message, 'No build has been started yet, try later');
+            executor.stop({ buildId: config.buildId }).catch(err => {
+                assert.deepEqual(
+                    err.message,
+                    'No build has been started yet, try later'
+                );
                 done();
             });
         });
 
-        it('return error when job.get is getting error', (done) => {
+        it('return error when job.get is getting error', done => {
             const error = new Error('job.get error');
 
             breakerMock.runCommand.withArgs(getOpts).rejects(error);
             breakerMock.runCommand.withArgs(stopOpts).resolves();
 
-            executor.stop({ buildId: config.buildId }).catch((err) => {
+            executor.stop({ buildId: config.buildId }).catch(err => {
                 assert.deepEqual(err, error);
                 done();
             });
         });
 
-        it('return error when build.stop is getting error', (done) => {
+        it('return error when build.stop is getting error', done => {
             const error = new Error('build.stop error');
 
             breakerMock.runCommand.withArgs(getOpts).resolves(fakeJobInfo);
             breakerMock.runCommand.withArgs(stopOpts).rejects(error);
 
-            executor.stop({ buildId: config.buildId }).catch((err) => {
+            executor.stop({ buildId: config.buildId }).catch(err => {
                 assert.deepEqual(err, error);
                 done();
             });
         });
 
-        it('return error when second job.get is getting error', (done) => {
+        it('return error when second job.get is getting error', done => {
             const error = new Error('job.get error');
 
-            breakerMock.runCommand.withArgs(getOpts).onCall(0).resolves(fakeJobInfo);
-            breakerMock.runCommand.withArgs(getOpts).onCall(1).rejects(error);
+            breakerMock.runCommand
+                .withArgs(getOpts)
+                .onCall(0)
+                .resolves(fakeJobInfo);
+            breakerMock.runCommand
+                .withArgs(getOpts)
+                .onCall(1)
+                .rejects(error);
             breakerMock.runCommand.withArgs(stopOpts).resolves();
 
-            executor.stop({ buildId: config.buildId }).catch((err) => {
+            executor.stop({ buildId: config.buildId }).catch(err => {
                 assert.deepEqual(err, error);
                 done();
             });
@@ -454,11 +490,11 @@ describe('index', () => {
     });
 
     describe('periodic', () => {
-        it('resolves to null when calling periodic start',
-            () => executor.startPeriodic().then(res => assert.isNull(res)));
+        it('resolves to null when calling periodic start', () =>
+            executor.startPeriodic().then(res => assert.isNull(res)));
 
-        it('resolves to null when calling periodic stop',
-            () => executor.stopPeriodic().then(res => assert.isNull(res)));
+        it('resolves to null when calling periodic stop', () =>
+            executor.stopPeriodic().then(res => assert.isNull(res)));
     });
 
     describe('_loadJobXml', () => {
@@ -471,13 +507,15 @@ describe('index', () => {
 
             mockery.registerMock('fs', fsMock);
 
-            fsMock.readFileSync.withArgs(sinon.match(/config\/job.xml.tim/))
+            fsMock.readFileSync
+                .withArgs(sinon.match(/config\/job.xml.tim/))
                 .returns(TEST_JOB_XML);
         });
 
         describe('use custom build script', () => {
             const buildScript = '/opt/bin/sd-build-test-<should-escape-xml>';
-            const cleanupScript = '/opt/bin/sd-cleanup-test-<should-escape-xml>';
+            const cleanupScript =
+                '/opt/bin/sd-cleanup-test-<should-escape-xml>';
 
             beforeEach(() => {
                 executor = new Executor({
@@ -502,13 +540,17 @@ describe('index', () => {
 
                 const parsedAnnotations = {};
 
-                assert.equal(executor._loadJobXml(config, parsedAnnotations), xml);
+                assert.equal(
+                    executor._loadJobXml(config, parsedAnnotations),
+                    xml
+                );
             });
         });
 
         describe('use docker-compose', () => {
             beforeEach(() => {
-                fsMock.readFileSync.withArgs(sinon.match(/config\/docker-compose.yml.tim/))
+                fsMock.readFileSync
+                    .withArgs(sinon.match(/config\/docker-compose.yml.tim/))
                     .returns(TEST_COMPOSE_YAML);
             });
 
@@ -562,7 +604,10 @@ rm -f docker-compose.yml
 
                 const parsedAnnotations = {};
 
-                assert.equal(executor._loadJobXml(config, parsedAnnotations), jobXml);
+                assert.equal(
+                    executor._loadJobXml(config, parsedAnnotations),
+                    jobXml
+                );
             });
 
             it('use provided options correctly without nodeLabel', () => {
@@ -631,7 +676,10 @@ rm -f docker-compose.yml
 
                 const parsedAnnotations = {};
 
-                assert.equal(executor._loadJobXml(config, parsedAnnotations), jobXml);
+                assert.equal(
+                    executor._loadJobXml(config, parsedAnnotations),
+                    jobXml
+                );
             });
 
             it('use provided options correctly with nodeLabel', () => {
@@ -700,7 +748,10 @@ rm -f docker-compose.yml
                     cleanupScript: xmlescape(cleanupScript)
                 });
 
-                assert.equal(executor._loadJobXml(config, parsedAnnotations), jobXml);
+                assert.equal(
+                    executor._loadJobXml(config, parsedAnnotations),
+                    jobXml
+                );
             });
         });
     });
@@ -725,23 +776,40 @@ rm -f docker-compose.yml
                 }
             });
 
-            jenkinsMock.job.create = sinon.stub(executor.jenkinsClient.job, 'create');
-            jenkinsMock.job.config = sinon.stub(executor.jenkinsClient.job, 'config');
-            jenkinsMock.job.exists = sinon.stub(executor.jenkinsClient.job, 'exists');
-            jenkinsMock.job.build = sinon.stub(executor.jenkinsClient.job, 'build');
+            jenkinsMock.job.create = sinon.stub(
+                executor.jenkinsClient.job,
+                'create'
+            );
+            jenkinsMock.job.config = sinon.stub(
+                executor.jenkinsClient.job,
+                'config'
+            );
+            jenkinsMock.job.exists = sinon.stub(
+                executor.jenkinsClient.job,
+                'exists'
+            );
+            jenkinsMock.job.build = sinon.stub(
+                executor.jenkinsClient.job,
+                'build'
+            );
 
             sinon.stub(executor, '_loadJobXml').returns(fakeXml);
         });
 
-        it('calls jenkins function correctly', (done) => {
+        it('calls jenkins function correctly', done => {
             jenkinsMock.job.exists.yieldsAsync(null, false);
             jenkinsMock.job.create.yieldsAsync(null);
             jenkinsMock.job.build.yieldsAsync(null);
 
             executor.start(config).then(() => {
-                assert.calledWith(jenkinsMock.job.create, { name: jobName, xml: fakeXml });
-                assert.calledWith(jenkinsMock.job.build,
-                    { name: jobName, parameters: buildParams });
+                assert.calledWith(jenkinsMock.job.create, {
+                    name: jobName,
+                    xml: fakeXml
+                });
+                assert.calledWith(jenkinsMock.job.build, {
+                    name: jobName,
+                    parameters: buildParams
+                });
                 done();
             });
         });

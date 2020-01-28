@@ -107,9 +107,14 @@ class JenkinsExecutor extends Executor {
         }
 
         // delay between retry attempts
-        return new Promise((resolve) => {
+        return new Promise(resolve => {
             setTimeout(resolve, this.cleanupWatchInterval * 1000);
-        }).then(() => this._jenkinsJobWaitStop(jobName, timeConsumed + this.cleanupWatchInterval));
+        }).then(() =>
+            this._jenkinsJobWaitStop(
+                jobName,
+                timeConsumed + this.cleanupWatchInterval
+            )
+        );
     }
 
     /**
@@ -123,7 +128,8 @@ class JenkinsExecutor extends Executor {
     _loadJobXml(config, annotations) {
         const { buildScript, cleanupScript } = this._taskScript(config);
         const nodeLabel = annotations[ANNOTATE_BUILD_NODE_LABEL]
-            ? `${this.nodeLabel}-${annotations[ANNOTATE_BUILD_NODE_LABEL]}` : this.nodeLabel;
+            ? `${this.nodeLabel}-${annotations[ANNOTATE_BUILD_NODE_LABEL]}`
+            : this.nodeLabel;
 
         const variables = {
             nodeLabel: xmlescape(nodeLabel),
@@ -131,8 +137,10 @@ class JenkinsExecutor extends Executor {
             cleanupScript: xmlescape(cleanupScript)
         };
 
-        return tinytim.renderFile(path.resolve(__dirname, './config/job.xml.tim'),
-            variables);
+        return tinytim.renderFile(
+            path.resolve(__dirname, './config/job.xml.tim'),
+            variables
+        );
     }
 
     /**
@@ -174,7 +182,10 @@ class JenkinsExecutor extends Executor {
             ui_uri: this.ecosystem.ui
         };
 
-        const templateFile = path.resolve(__dirname, './config/docker-compose.yml.tim');
+        const templateFile = path.resolve(
+            __dirname,
+            './config/docker-compose.yml.tim'
+        );
         const composeYml = tinytim.renderFile(templateFile, variables);
 
         const buildScript = [
@@ -243,11 +254,15 @@ class JenkinsExecutor extends Executor {
         this.nodeLabel = options.jenkins.nodeLabel || 'screwdriver';
         this.buildTimeout = options.jenkins.buildTimeout || 90;
         this.maxBuildTimeout = options.jenkins.maxBuildTimeout || 120;
-        this.composeCommand = (options.docker && options.docker.composeCommand) || 'docker-compose';
-        this.launchVersion = (options.docker && options.docker.launchVersion) || 'stable';
+        this.composeCommand =
+            (options.docker && options.docker.composeCommand) ||
+            'docker-compose';
+        this.launchVersion =
+            (options.docker && options.docker.launchVersion) || 'stable';
         this.prefix = (options.docker && options.docker.prefix) || '';
         this.memory = (options.docker && options.docker.memory) || '4g';
-        this.memoryLimit = (options.docker && options.docker.memoryLimit) || '6g';
+        this.memoryLimit =
+            (options.docker && options.docker.memoryLimit) || '6g';
 
         this.buildScript = options.buildScript || '';
         this.cleanupScript = options.cleanupScript || '';
@@ -255,14 +270,19 @@ class JenkinsExecutor extends Executor {
         this.cleanupWatchInterval = options.cleanupWatchInterval || 2;
 
         // need to pass port number in the future
-        this[baseUrl] = `http://${this.username}:${this[password]}@${this.host}:${this.port}`;
+        this[
+            baseUrl
+        ] = `http://${this.username}:${this[password]}@${this.host}:${this.port}`;
         this.jenkinsClient = jenkins({
             baseUrl: this[baseUrl],
             crumbIssuer: true
         });
 
         // eslint-disable-next-line no-underscore-dangle
-        this.breaker = new Breaker(this._jenkinsCommand.bind(this), options.fusebox);
+        this.breaker = new Breaker(
+            this._jenkinsCommand.bind(this),
+            options.fusebox
+        );
     }
 
     /**
@@ -281,8 +301,12 @@ class JenkinsExecutor extends Executor {
         );
 
         const xml = this._loadJobXml(config, annotations);
+        // prettier-ignore
         const buildTimeout = annotations[ANNOTATE_BUILD_TIMEOUT]
-            ? Math.min(annotations[ANNOTATE_BUILD_TIMEOUT], this.maxBuildTimeout)
+            ? Math.min(
+                annotations[ANNOTATE_BUILD_TIMEOUT],
+                this.maxBuildTimeout
+            )
             : this.buildTimeout;
 
         await this._jenkinsJobCreateOrUpdate(jobName, xml);
@@ -290,18 +314,20 @@ class JenkinsExecutor extends Executor {
         return this.breaker.runCommand({
             module: 'job',
             action: 'build',
-            params: [{
-                name: jobName,
-                parameters: {
-                    SD_BUILD_ID: String(config.buildId),
-                    SD_TOKEN: config.token,
-                    SD_CONTAINER: config.container,
-                    SD_API: this.ecosystem.api,
-                    SD_STORE: this.ecosystem.store,
-                    SD_UI: this.ecosystem.ui,
-                    SD_BUILD_TIMEOUT: buildTimeout
+            params: [
+                {
+                    name: jobName,
+                    parameters: {
+                        SD_BUILD_ID: String(config.buildId),
+                        SD_TOKEN: config.token,
+                        SD_CONTAINER: config.container,
+                        SD_API: this.ecosystem.api,
+                        SD_STORE: this.ecosystem.store,
+                        SD_UI: this.ecosystem.ui,
+                        SD_BUILD_TIMEOUT: buildTimeout
+                    }
                 }
-            }]
+            ]
         });
     }
 

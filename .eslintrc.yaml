@@ -1,3 +1,6 @@
 extends: screwdriver
 rules:
     no-underscore-dangle: off
+    max-statements: off
+    complexity: off
+    max-lines-per-function: off

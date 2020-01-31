@@ -428,18 +428,14 @@ describe('index', () => {
             });
         });
 
-        it('return error when there is no build to be stopped yet', done => {
-            const noBuildJobInfo = {
-                lastBuild: null
-            };
-
-            breakerMock.runCommand.withArgs(getOpts).resolves(noBuildJobInfo);
+        it('return error when there are no jobs in process yet', done => {
+            breakerMock.runCommand.withArgs(getOpts).resolves(null);
             breakerMock.runCommand.withArgs(stopOpts).resolves(null);
 
             executor.stop({ buildId: config.buildId }).catch(err => {
                 assert.deepEqual(
                     err.message,
-                    'No build has been started yet, try later'
+                    'No jobs in process yet, try later'
                 );
                 done();
             });

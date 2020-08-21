@@ -286,10 +286,7 @@ describe('index', () => {
             executor.start(config).then(() => {
                 assert.calledWith(breakerMock.runCommand, existsOpts);
                 assert.calledWith(breakerMock.runCommand, createOpts);
-                assert.calledWith(
-                    breakerMock.runCommand,
-                    configuredBuildTimeoutOpts
-                );
+                assert.calledWith(breakerMock.runCommand, configuredBuildTimeoutOpts);
                 done();
             });
         });
@@ -433,10 +430,7 @@ describe('index', () => {
             breakerMock.runCommand.withArgs(stopOpts).resolves(null);
 
             executor.stop({ buildId: config.buildId }).catch(err => {
-                assert.deepEqual(
-                    err.message,
-                    'No jobs in process yet, try later'
-                );
+                assert.deepEqual(err.message, 'No jobs in process yet, try later');
                 done();
             });
         });
@@ -503,15 +497,12 @@ describe('index', () => {
 
             mockery.registerMock('fs', fsMock);
 
-            fsMock.readFileSync
-                .withArgs(sinon.match(/config\/job.xml.tim/))
-                .returns(TEST_JOB_XML);
+            fsMock.readFileSync.withArgs(sinon.match(/config\/job.xml.tim/)).returns(TEST_JOB_XML);
         });
 
         describe('use custom build script', () => {
             const buildScript = '/opt/bin/sd-build-test-<should-escape-xml>';
-            const cleanupScript =
-                '/opt/bin/sd-cleanup-test-<should-escape-xml>';
+            const cleanupScript = '/opt/bin/sd-cleanup-test-<should-escape-xml>';
 
             beforeEach(() => {
                 executor = new Executor({
@@ -536,18 +527,13 @@ describe('index', () => {
 
                 const parsedAnnotations = {};
 
-                assert.equal(
-                    executor._loadJobXml(config, parsedAnnotations),
-                    xml
-                );
+                assert.equal(executor._loadJobXml(config, parsedAnnotations), xml);
             });
         });
 
         describe('use docker-compose', () => {
             beforeEach(() => {
-                fsMock.readFileSync
-                    .withArgs(sinon.match(/config\/docker-compose.yml.tim/))
-                    .returns(TEST_COMPOSE_YAML);
+                fsMock.readFileSync.withArgs(sinon.match(/config\/docker-compose.yml.tim/)).returns(TEST_COMPOSE_YAML);
             });
 
             it('use default options correctly', () => {
@@ -600,10 +586,7 @@ rm -f docker-compose.yml
 
                 const parsedAnnotations = {};
 
-                assert.equal(
-                    executor._loadJobXml(config, parsedAnnotations),
-                    jobXml
-                );
+                assert.equal(executor._loadJobXml(config, parsedAnnotations), jobXml);
             });
 
             it('use provided options correctly without nodeLabel', () => {
@@ -672,10 +655,7 @@ rm -f docker-compose.yml
 
                 const parsedAnnotations = {};
 
-                assert.equal(
-                    executor._loadJobXml(config, parsedAnnotations),
-                    jobXml
-                );
+                assert.equal(executor._loadJobXml(config, parsedAnnotations), jobXml);
             });
 
             it('use provided options correctly with nodeLabel', () => {
@@ -744,10 +724,7 @@ rm -f docker-compose.yml
                     cleanupScript: xmlescape(cleanupScript)
                 });
 
-                assert.equal(
-                    executor._loadJobXml(config, parsedAnnotations),
-                    jobXml
-                );
+                assert.equal(executor._loadJobXml(config, parsedAnnotations), jobXml);
             });
         });
     });
@@ -772,22 +749,10 @@ rm -f docker-compose.yml
                 }
             });
 
-            jenkinsMock.job.create = sinon.stub(
-                executor.jenkinsClient.job,
-                'create'
-            );
-            jenkinsMock.job.config = sinon.stub(
-                executor.jenkinsClient.job,
-                'config'
-            );
-            jenkinsMock.job.exists = sinon.stub(
-                executor.jenkinsClient.job,
-                'exists'
-            );
-            jenkinsMock.job.build = sinon.stub(
-                executor.jenkinsClient.job,
-                'build'
-            );
+            jenkinsMock.job.create = sinon.stub(executor.jenkinsClient.job, 'create');
+            jenkinsMock.job.config = sinon.stub(executor.jenkinsClient.job, 'config');
+            jenkinsMock.job.exists = sinon.stub(executor.jenkinsClient.job, 'exists');
+            jenkinsMock.job.build = sinon.stub(executor.jenkinsClient.job, 'build');
 
             sinon.stub(executor, '_loadJobXml').returns(fakeXml);
         });

@@ -6,7 +6,7 @@ const jenkins = require('jenkins');
 const xmlescape = require('xml-escape');
 const tinytim = require('tinytim');
 const Breaker = require('circuit-fuses').breaker;
-const hoek = require('hoek');
+const hoek = require('@hapi/hoek');
 
 const password = Symbol('password');
 const baseUrl = Symbol('baseUrl');
@@ -116,12 +116,7 @@ class JenkinsExecutor extends Executor {
         // delay between retry attempts
         return new Promise(resolve => {
             setTimeout(resolve, this.cleanupWatchInterval * 1000);
-        }).then(() =>
-            this._jenkinsJobWaitStop(
-                jobName,
-                timeConsumed + this.cleanupWatchInterval
-            )
-        );
+        }).then(() => this._jenkinsJobWaitStop(jobName, timeConsumed + this.cleanupWatchInterval));
     }
 
     /**
@@ -144,10 +139,7 @@ class JenkinsExecutor extends Executor {
             cleanupScript: xmlescape(cleanupScript)
         };
 
-        return tinytim.renderFile(
-            path.resolve(__dirname, './config/job.xml.tim'),
-            variables
-        );
+        return tinytim.renderFile(path.resolve(__dirname, './config/job.xml.tim'), variables);
     }
 
     /**
@@ -189,10 +181,7 @@ class JenkinsExecutor extends Executor {
             ui_uri: this.ecosystem.ui
         };
 
-        const templateFile = path.resolve(
-            __dirname,
-            './config/docker-compose.yml.tim'
-        );
+        const templateFile = path.resolve(__dirname, './config/docker-compose.yml.tim');
         const composeYml = tinytim.renderFile(templateFile, variables);
 
         const buildScript = [
@@ -205,10 +194,7 @@ class JenkinsExecutor extends Executor {
             `${this.composeCommand} up`
         ].join('\n');
 
-        const cleanupScript = [
-            `${this.composeCommand} rm -f -s`,
-            'rm -f docker-compose.yml'
-        ].join('\n');
+        const cleanupScript = [`${this.composeCommand} rm -f -s`, 'rm -f docker-compose.yml'].join('\n');
 
         return { buildScript, cleanupScript };
     }
@@ -261,15 +247,11 @@ class JenkinsExecutor extends Executor {
         this.nodeLabel = options.jenkins.nodeLabel || 'screwdriver';
         this.buildTimeout = options.jenkins.buildTimeout || 90;
         this.maxBuildTimeout = options.jenkins.maxBuildTimeout || 120;
-        this.composeCommand =
-            (options.docker && options.docker.composeCommand) ||
-            'docker-compose';
-        this.launchVersion =
-            (options.docker && options.docker.launchVersion) || 'stable';
+        this.composeCommand = (options.docker && options.docker.composeCommand) || 'docker-compose';
+        this.launchVersion = (options.docker && options.docker.launchVersion) || 'stable';
         this.prefix = (options.docker && options.docker.prefix) || '';
         this.memory = (options.docker && options.docker.memory) || '4g';
-        this.memoryLimit =
-            (options.docker && options.docker.memoryLimit) || '6g';
+        this.memoryLimit = (options.docker && options.docker.memoryLimit) || '6g';
 
         this.buildScript = options.buildScript || '';
         this.cleanupScript = options.cleanupScript || '';
@@ -277,19 +259,14 @@ class JenkinsExecutor extends Executor {
         this.cleanupWatchInterval = options.cleanupWatchInterval || 2;
 
         // need to pass port number in the future
-        this[
-            baseUrl
-        ] = `http://${this.username}:${this[password]}@${this.host}:${this.port}`;
+        this[baseUrl] = `http://${this.username}:${this[password]}@${this.host}:${this.port}`;
         this.jenkinsClient = jenkins({
             baseUrl: this[baseUrl],
             crumbIssuer: true
         });
 
         // eslint-disable-next-line no-underscore-dangle
-        this.breaker = new Breaker(
-            this._jenkinsCommand.bind(this),
-            options.fusebox
-        );
+        this.breaker = new Breaker(this._jenkinsCommand.bind(this), options.fusebox);
     }
 
     /**
@@ -303,9 +280,7 @@ class JenkinsExecutor extends Executor {
      */
     async _start(config) {
         const jobName = this._jobName(config.buildId);
-        const annotations = this.parseAnnotations(
-            hoek.reach(config, 'annotations', { default: {} })
-        );
+        const annotations = this.parseAnnotations(hoek.reach(config, 'annotations', { default: {} }));
 
         const xml = this._loadJobXml(config, annotations);
         // prettier-ignore

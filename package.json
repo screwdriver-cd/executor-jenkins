@@ -1,11 +1,11 @@
 {
   "name": "screwdriver-executor-jenkins",
-  "version": "2.0.0",
+  "version": "5.0.0",
   "description": "Jenkins Executor plugin for Screwdriver",
   "main": "index.js",
   "scripts": {
     "pretest": "eslint .",
-    "test": "jenkins-mocha --recursive --timeout 15000",
+    "test": "mocha --recursive --timeout 15000",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post"
   },
   "repository": {
@@ -34,18 +34,18 @@
   ],
   "devDependencies": {
     "chai": "^4.2.0",
-    "eslint": "^4.19.0",
-    "eslint-config-screwdriver": "^4.0.0",
-    "jenkins-mocha": "^7.0.0",
+    "eslint": "^7.7.0",
+    "eslint-config-screwdriver": "^5.0.4",
+    "mocha": "^8.1.1",
     "mockery": "^2.0.0",
-    "sinon": "^7.1.0"
+    "sinon": "^9.0.3"
   },
   "dependencies": {
+    "@hapi/hoek": "^9.0.4",
     "circuit-fuses": "^4.0.4",
-    "hoek": "^5.0.4",
-    "jenkins": "^0.20.0",
-    "request": "^2.88.0",
-    "screwdriver-executor-base": "^7.2.0",
+    "jenkins": "^0.28.0",
+    "request": "^2.88.2",
+    "screwdriver-executor-base": "^8.0.0",
     "tinytim": "^0.1.1",
     "xml-escape": "^1.1.0"
   },

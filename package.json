@@ -47,7 +47,6 @@
     "@hapi/hoek": "^9.0.4",
     "circuit-fuses": "^4.0.4",
     "jenkins": "^0.28.0",
-    "request": "^2.88.2",
     "screwdriver-executor-base": "^8.0.0",
     "tinytim": "^0.1.1",
     "xml-escape": "^1.1.0"

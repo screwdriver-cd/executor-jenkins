@@ -12,7 +12,7 @@
     "url": "git+https://github.com/screwdriver-cd/executor-jenkins.git"
   },
   "homepage": "https://github.com/screwdriver-cd/executor-jenkins",
-  "bugs": "https://github.com/screwdriver-cd/executor-jenkins/issues",
+  "bugs": "https://github.com/screwdriver-cd/screwdriver/issues",
   "keywords": [
     "screwdriver",
     "yahoo"

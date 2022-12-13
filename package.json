@@ -1,16 +1,15 @@
 {
   "name": "screwdriver-executor-jenkins",
-  "version": "5.0.0",
+  "version": "6.0.0",
   "description": "Jenkins Executor plugin for Screwdriver",
   "main": "index.js",
   "scripts": {
     "pretest": "eslint .",
-    "test": "nyc --report-dir ./artifacts/coverage --reporter=lcov mocha --reporter mocha-multi-reporters --reporter-options configFile=./mocha.config.json --recursive --timeout 4000 --retries 1 --exit --allow-uncaught true --color true",
-    "semantic-release": "semantic-release pre && npm publish && semantic-release post"
+    "test": "nyc --report-dir ./artifacts/coverage --reporter=lcov mocha --reporter mocha-multi-reporters --reporter-options configFile=./mocha.config.json --recursive --timeout 4000 --retries 1 --exit --allow-uncaught true --color true"
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:screwdriver-cd/executor-jenkins.git"
+    "url": "git+https://github.com/screwdriver-cd/executor-jenkins.git"
   },
   "homepage": "https://github.com/screwdriver-cd/executor-jenkins",
   "bugs": "https://github.com/screwdriver-cd/executor-jenkins/issues",
@@ -33,28 +32,25 @@
     "Tiffany Kyi <tiffanykyi@gmail.com>"
   ],
   "devDependencies": {
-    "chai": "^4.2.0",
-    "eslint": "^7.7.0",
-    "eslint-config-screwdriver": "^5.0.4",
-    "mocha": "^8.2.1",
+    "chai": "^4.3.7",
+    "eslint": "^8.28.0",
+    "eslint-config-screwdriver": "^7.0.0",
+    "mocha": "^10.1.0",
     "mocha-multi-reporters": "^1.5.1",
     "mocha-sonarqube-reporter": "^1.0.2",
-    "nyc": "^15.0.0",
-    "mockery": "^2.0.0",
-    "sinon": "^9.0.3"
+    "nyc": "^15.1.0",
+    "mockery": "^2.1.0",
+    "sinon": "^15.0.0"
   },
   "dependencies": {
-    "@hapi/hoek": "^9.0.4",
-    "circuit-fuses": "^4.0.4",
-    "jenkins": "^0.28.0",
-    "screwdriver-executor-base": "^8.0.0",
+    "@hapi/hoek": "^10.0.1",
+    "circuit-fuses": "^5.0.0",
+    "jenkins": "^1.0.1",
+    "screwdriver-executor-base": "^9.0.0",
     "tinytim": "^0.1.1",
     "xml-escape": "^1.1.0"
   },
   "release": {
-    "debug": false,
-    "verifyConditions": {
-      "path": "./node_modules/semantic-release/src/lib/plugin-noop.js"
-    }
+    "debug": false
   }
 }

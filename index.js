@@ -2,7 +2,7 @@
 
 const Executor = require('screwdriver-executor-base');
 const path = require('path');
-const jenkins = require('jenkins');
+const Jenkins = require('jenkins');
 const xmlescape = require('xml-escape');
 const tinytim = require('tinytim');
 const Breaker = require('circuit-fuses').breaker;
@@ -260,7 +260,7 @@ class JenkinsExecutor extends Executor {
 
         // need to pass port number in the future
         this[baseUrl] = `http://${this.username}:${this[password]}@${this.host}:${this.port}`;
-        this.jenkinsClient = jenkins({
+        this.jenkinsClient = new Jenkins({
             baseUrl: this[baseUrl],
             crumbIssuer: true
         });

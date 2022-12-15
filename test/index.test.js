@@ -343,6 +343,7 @@ describe('index', () => {
         let getOpts;
         let stopOpts;
         let destroyOpts;
+        const apiUri = 'https://api.sd.cd';
 
         beforeEach(() => {
             getOpts = {
@@ -365,49 +366,44 @@ describe('index', () => {
         });
 
         it('return null when the build is successfully stopped', done => {
-            breakerMock.runCommand
-                .withArgs(getOpts)
-                .onCall(0)
-                .resolves(fakeJobInfo);
-            breakerMock.runCommand
-                .withArgs(getOpts)
-                .onCall(1)
-                .resolves(fakeCompletedJobInfo);
+            breakerMock.runCommand.withArgs(getOpts).onCall(0).resolves(fakeJobInfo);
+            breakerMock.runCommand.withArgs(getOpts).onCall(1).resolves(fakeCompletedJobInfo);
             breakerMock.runCommand.withArgs(stopOpts).resolves(null);
             breakerMock.runCommand.withArgs(destroyOpts).resolves(null);
 
-            executor.stop({ buildId: config.buildId }).then(ret => {
-                assert.isNull(ret);
-                assert.calledWith(breakerMock.runCommand, getOpts);
-                assert.calledWith(breakerMock.runCommand, stopOpts);
-                assert.calledWith(breakerMock.runCommand, destroyOpts);
-                done();
-            });
+            executor
+                .stop({
+                    apiUri,
+                    buildId: config.buildId
+                })
+                .then(ret => {
+                    assert.isNull(ret);
+                    assert.calledWith(breakerMock.runCommand, getOpts);
+                    assert.calledWith(breakerMock.runCommand, stopOpts);
+                    assert.calledWith(breakerMock.runCommand, destroyOpts);
+                    done();
+                });
         });
 
         it('return null when the build is successfully stopped after a while', done => {
-            breakerMock.runCommand
-                .withArgs(getOpts)
-                .onCall(0)
-                .resolves(fakeJobInfo);
-            breakerMock.runCommand
-                .withArgs(getOpts)
-                .onCall(1)
-                .resolves(fakeJobInfo);
-            breakerMock.runCommand
-                .withArgs(getOpts)
-                .onCall(2)
-                .resolves(fakeCompletedJobInfo);
+            breakerMock.runCommand.withArgs(getOpts).onCall(0).resolves(fakeJobInfo);
+            breakerMock.runCommand.withArgs(getOpts).onCall(1).resolves(fakeJobInfo);
+            breakerMock.runCommand.withArgs(getOpts).onCall(2).resolves(fakeCompletedJobInfo);
             breakerMock.runCommand.withArgs(stopOpts).resolves(null);
             breakerMock.runCommand.withArgs(destroyOpts).resolves(null);
 
-            executor.stop({ buildId: config.buildId }).then(ret => {
-                assert.isNull(ret);
-                assert.calledWith(breakerMock.runCommand, getOpts);
-                assert.calledWith(breakerMock.runCommand, stopOpts);
-                assert.calledWith(breakerMock.runCommand, destroyOpts);
-                done();
-            });
+            executor
+                .stop({
+                    apiUri,
+                    buildId: config.buildId
+                })
+                .then(ret => {
+                    assert.isNull(ret);
+                    assert.calledWith(breakerMock.runCommand, getOpts);
+                    assert.calledWith(breakerMock.runCommand, stopOpts);
+                    assert.calledWith(breakerMock.runCommand, destroyOpts);
+                    done();
+                });
         });
 
         it('return error when the job not stopped until the timelimit', done => {
@@ -417,22 +413,32 @@ describe('index', () => {
             breakerMock.runCommand.withArgs(stopOpts).resolves(null);
             breakerMock.runCommand.withArgs(destroyOpts).resolves(null);
 
-            executor.stop({ buildId: config.buildId }).catch(err => {
-                assert.deepEqual(err.message, 'Clean up timeout exceeded');
-                assert.calledWith(breakerMock.runCommand, getOpts);
-                assert.calledWith(breakerMock.runCommand, stopOpts);
-                done();
-            });
+            executor
+                .stop({
+                    apiUri,
+                    buildId: config.buildId
+                })
+                .catch(err => {
+                    assert.deepEqual(err.message, 'Clean up timeout exceeded');
+                    assert.calledWith(breakerMock.runCommand, getOpts);
+                    assert.calledWith(breakerMock.runCommand, stopOpts);
+                    done();
+                });
         });
 
         it('return error when there are no jobs in process yet', done => {
             breakerMock.runCommand.withArgs(getOpts).resolves(null);
             breakerMock.runCommand.withArgs(stopOpts).resolves(null);
 
-            executor.stop({ buildId: config.buildId }).catch(err => {
-                assert.deepEqual(err.message, 'No jobs in process yet, try later');
-                done();
-            });
+            executor
+                .stop({
+                    apiUri,
+                    buildId: config.buildId
+                })
+                .catch(err => {
+                    assert.deepEqual(err.message, 'No jobs in process yet, try later');
+                    done();
+                });
         });
 
         it('return error when job.get is getting error', done => {
@@ -441,10 +447,15 @@ describe('index', () => {
             breakerMock.runCommand.withArgs(getOpts).rejects(error);
             breakerMock.runCommand.withArgs(stopOpts).resolves();
 
-            executor.stop({ buildId: config.buildId }).catch(err => {
-                assert.deepEqual(err, error);
-                done();
-            });
+            executor
+                .stop({
+                    apiUri,
+                    buildId: config.buildId
+                })
+                .catch(err => {
+                    assert.deepEqual(err, error);
+                    done();
+                });
         });
 
         it('return error when build.stop is getting error', done => {
@@ -453,29 +464,33 @@ describe('index', () => {
             breakerMock.runCommand.withArgs(getOpts).resolves(fakeJobInfo);
             breakerMock.runCommand.withArgs(stopOpts).rejects(error);
 
-            executor.stop({ buildId: config.buildId }).catch(err => {
-                assert.deepEqual(err, error);
-                done();
-            });
+            executor
+                .stop({
+                    apiUri,
+                    buildId: config.buildId
+                })
+                .catch(err => {
+                    assert.deepEqual(err, error);
+                    done();
+                });
         });
 
         it('return error when second job.get is getting error', done => {
             const error = new Error('job.get error');
 
-            breakerMock.runCommand
-                .withArgs(getOpts)
-                .onCall(0)
-                .resolves(fakeJobInfo);
-            breakerMock.runCommand
-                .withArgs(getOpts)
-                .onCall(1)
-                .rejects(error);
+            breakerMock.runCommand.withArgs(getOpts).onCall(0).resolves(fakeJobInfo);
+            breakerMock.runCommand.withArgs(getOpts).onCall(1).rejects(error);
             breakerMock.runCommand.withArgs(stopOpts).resolves();
 
-            executor.stop({ buildId: config.buildId }).catch(err => {
-                assert.deepEqual(err, error);
-                done();
-            });
+            executor
+                .stop({
+                    apiUri,
+                    buildId: config.buildId
+                })
+                .catch(err => {
+                    assert.deepEqual(err, error);
+                    done();
+                });
         });
     });
 

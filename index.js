@@ -27,10 +27,10 @@ class JenkinsExecutor extends Executor {
      */
     _jenkinsCommand(options, callback) {
         // To pass arguments as an array, we need to use apply
-        this.jenkinsClient[options.module][options.action].apply(
-            this.jenkinsClient[options.module],
-            options.params.concat([callback])
-        );
+        this.jenkinsClient[options.module][options.action]
+            .apply(this.jenkinsClient[options.module], options.params)
+            .then(result => callback(null, result))
+            .catch(error => callback(error));
     }
 
     /**
@@ -45,14 +45,14 @@ class JenkinsExecutor extends Executor {
         const jobExists = await this.breaker.runCommand({
             module: 'job',
             action: 'exists',
-            params: [{ name: jobName }]
+            params: [jobName]
         });
         const action = jobExists ? 'config' : 'create';
 
         return this.breaker.runCommand({
             module: 'job',
             action,
-            params: [{ name: jobName, xml }]
+            params: [jobName, xml]
         });
     }
 
@@ -67,7 +67,7 @@ class JenkinsExecutor extends Executor {
         const job = await this.breaker.runCommand({
             module: 'job',
             action: 'get',
-            params: [{ name: jobName }]
+            params: [jobName]
         });
 
         if (!job) {
@@ -78,13 +78,13 @@ class JenkinsExecutor extends Executor {
             await this.breaker.runCommand({
                 module: 'queue',
                 action: 'cancel',
-                params: [{ number: job.queueItem.id }]
+                params: [job.queueItem.id]
             });
         } else if (job.lastBuild && job.lastBuild.number) {
             await this.breaker.runCommand({
                 module: 'build',
                 action: 'stop',
-                params: [{ name: jobName, number: job.lastBuild.number }]
+                params: [jobName, job.lastBuild.number]
             });
             await this._jenkinsJobWaitStop(jobName, 0);
         }
@@ -106,7 +106,7 @@ class JenkinsExecutor extends Executor {
         const job = await this.breaker.runCommand({
             module: 'job',
             action: 'get',
-            params: [{ name: jobName }]
+            params: [jobName]
         });
 
         if (job && job.lastCompletedBuild && job.lastCompletedBuild.number) {
@@ -328,7 +328,7 @@ class JenkinsExecutor extends Executor {
         return this.breaker.runCommand({
             module: 'job',
             action: 'destroy',
-            params: [{ name: jobName }]
+            params: [jobName]
         });
     }
 

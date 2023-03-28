@@ -203,19 +203,19 @@ describe('index', () => {
             createOpts = {
                 module: 'job',
                 action: 'create',
-                params: [{ name: jobName, xml: fakeXml }]
+                params: [jobName, fakeXml]
             };
 
             configOpts = {
                 module: 'job',
                 action: 'config',
-                params: [{ name: jobName, xml: fakeXml }]
+                params: [jobName, fakeXml]
             };
 
             existsOpts = {
                 module: 'job',
                 action: 'exists',
-                params: [{ name: jobName }]
+                params: [jobName]
             };
 
             buildOpts = {
@@ -349,19 +349,19 @@ describe('index', () => {
             getOpts = {
                 module: 'job',
                 action: 'get',
-                params: [{ name: jobName }]
+                params: [jobName]
             };
 
             stopOpts = {
                 module: 'build',
                 action: 'stop',
-                params: [{ name: jobName, number: buildNumber }]
+                params: [jobName, buildNumber]
             };
 
             destroyOpts = {
                 module: 'job',
                 action: 'destroy',
-                params: [{ name: jobName }]
+                params: [jobName]
             };
         });
 
@@ -773,15 +773,12 @@ rm -f docker-compose.yml
         });
 
         it('calls jenkins function correctly', done => {
-            jenkinsMock.job.exists.yieldsAsync(null, false);
-            jenkinsMock.job.create.yieldsAsync(null);
-            jenkinsMock.job.build.yieldsAsync(null);
+            jenkinsMock.job.exists.resolves(false);
+            jenkinsMock.job.create.resolves(null);
+            jenkinsMock.job.build.resolves(null);
 
             executor.start(config).then(() => {
-                assert.calledWith(jenkinsMock.job.create, {
-                    name: jobName,
-                    xml: fakeXml
-                });
+                assert.calledWith(jenkinsMock.job.create, jobName, fakeXml);
                 assert.calledWith(jenkinsMock.job.build, {
                     name: jobName,
                     parameters: buildParams

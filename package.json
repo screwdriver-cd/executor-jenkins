@@ -1,6 +1,6 @@
 {
   "name": "screwdriver-executor-jenkins",
-  "version": "6.0.0",
+  "version": "7.0.0",
   "description": "Jenkins Executor plugin for Screwdriver",
   "main": "index.js",
   "scripts": {
@@ -46,7 +46,7 @@
     "@hapi/hoek": "^10.0.1",
     "circuit-fuses": "^5.0.0",
     "jenkins": "^1.0.1",
-    "screwdriver-executor-base": "^9.0.0",
+    "screwdriver-executor-base": "^10.0.0",
     "tinytim": "^0.1.1",
     "xml-escape": "^1.1.0"
   },
